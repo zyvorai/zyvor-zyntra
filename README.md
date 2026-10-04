@@ -12,11 +12,11 @@ Nothing runs until a person approves it.
 [![Book a demo](https://img.shields.io/badge/Book_a_demo-ff5a15?style=for-the-badge)](https://zyvor.dev/schedule?utm_source=github&utm_medium=zyntra&utm_campaign=readme_hero)
 [![30-day PoC](https://img.shields.io/badge/30--day_PoC-111111?style=for-the-badge)](https://zyvor.dev/poc?utm_source=github&utm_medium=zyntra&utm_campaign=readme_hero)
 
-[![CI](https://github.com/zyvorai/zyntra/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyntra/actions/workflows/ci.yml)
+[![CI](https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml)
 [![License: Zyvor Production v1.0](https://img.shields.io/badge/License-Zyvor%20Production%20v1.0-ff5a15.svg)](LICENSE)
-[![Version](https://img.shields.io/github/v/release/zyvorai/zyntra?label=version&color=111111)](https://github.com/zyvorai/zyntra/releases)
+[![Version](https://img.shields.io/github/v/release/zyvorai/zyvor-zyntra?label=version&color=111111)](https://github.com/zyvorai/zyvor-zyntra/releases)
 
-<img src="docs/social/zyntra-share-2400x1260.png" alt="Zyntra: know the next best action, and why. Signals, KPI graph, what-if, ranked plan, human approval, verified outcome." width="100%">
+<img src="docs/social/zyntra-hero-dark.jpg" alt="Zyntra: know the next best action, and why. Signals, KPI graph, what-if, ranked plan, human approval, verified outcome." width="100%">
 
 </div>
 
