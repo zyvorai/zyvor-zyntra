@@ -46,15 +46,15 @@ export default function KPIInvestigation() {
   </Card>;
 }
 
-export function InvestigationEvidence({ report }: { report: InvestigationReport }) {
+export function InvestigationEvidence({ report, exportValue = report, filename = 'zyntra-kpi-investigation.json' }: { report: InvestigationReport; exportValue?: unknown; filename?: string }) {
   const shift = report.shift;
   const associations = report.comparisons.filter(c => c.status === 'associated').slice(0, 5);
   const unit = report.target.unit;
   const measure = (n: number) => new Intl.NumberFormat(undefined, { maximumSignificantDigits: 6, notation: Math.abs(n) >= 1e9 || (n !== 0 && Math.abs(n) < 1e-6) ? 'scientific' : 'standard' }).format(n);
   const utc = (s: string) => new Date(s).toISOString();
   const download = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
-    const a = document.createElement('a'); a.href = url; a.download = 'zyntra-kpi-investigation.json'; document.body.appendChild(a); a.click(); a.remove();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(exportValue, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
   return <div className="info-note" aria-label={`Investigation for ${report.target.id}`}>

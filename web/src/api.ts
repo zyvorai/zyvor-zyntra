@@ -753,3 +753,5 @@ export interface WatchIncident { id: string; rule: WatchRule; version: number; s
  observed_at: string; value: number; acknowledged_at?: string; acknowledged_by?: string; acknowledgement_note?: string; resolved_at?: string; resolve_reason?: string }
 export interface WatchView { rules: WatchRule[]; runtime: Record<string, {status: string; active_incident?: string; last_observed_at?: string; last_value?: number; pending_since?: string; clearing_since?: string}>;
  incidents: WatchIncident[]; events: {sequence: number; at: string; rule: string; incident?: string; kind: string; by: string; note?: string}[]; persistence_error?: string }
+
+export interface IncidentInvestigation { incident: WatchIncident; generated_at: string; context: string; report: InvestigationReport }

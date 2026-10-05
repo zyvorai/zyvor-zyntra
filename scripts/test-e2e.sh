@@ -99,6 +99,8 @@ done
 grep -q '"status": "open"' <<<"$watch_view" || fail "fresh queue observation did not open incident"
 watch_id=$(sed -n 's/.*"active_incident": "\([^"]*\)".*/\1/p' <<<"$watch_view" | head -1)
 [ -n "$watch_id" ] || fail "watch incident ID missing"
+expect "incident investigation context" '"context": "Historical context before incident opening' api "http://127.0.0.1:$PORT/api/v1/watch-incidents/$watch_id/investigation"
+expect "incident investigation warming" '"status": "warming"' api "http://127.0.0.1:$PORT/api/v1/watch-incidents/$watch_id/investigation"
 expect "watch acknowledge" '"status": "acknowledged"' api -X POST -H 'Content-Type: application/json' \
   -d '{"expected_version":1,"note":"E2E investigating queue"}' "http://127.0.0.1:$PORT/api/v1/watch-incidents/$watch_id/acknowledge"
 [ "$(code -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
@@ -107,6 +109,8 @@ expect "watch acknowledge" '"status": "acknowledged"' api -X POST -H 'Content-Ty
 expect "watch delete" '"deleted": true' api -X DELETE -H 'Content-Type: application/json' \
   -d '{"expected_version":1}' "http://127.0.0.1:$PORT/api/v1/watches/queue"
 expect "watch resolution reason" '"resolve_reason": "rule deleted"' api "http://127.0.0.1:$PORT/api/v1/watches"
+
+expect "resolved incident investigation" '"resolve_reason": "rule deleted"' api "http://127.0.0.1:$PORT/api/v1/watch-incidents/$watch_id/investigation"
 
 # The running binary stores and retrieves cited document evidence without acting.
 expect "knowledge create" '"version": 1' api -X PUT -H 'Content-Type: application/json' \

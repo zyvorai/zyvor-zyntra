@@ -118,3 +118,28 @@ retain the last durable state, and reset duration continuity on the next
 successful evaluation. Corrupt JSON or an unsupported persisted schema fails
 startup visibly. Back up with SQLite's backup API or stop/checkpoint before
 copying; copying only the main file while WAL writes are active can lose data.
+
+
+## Investigate an incident
+
+Use **Investigate watch-N** in the inbox, including for resolved incidents or
+incidents whose rule was deleted. `GET /api/v1/watch-incidents/{id}/investigation`
+is available to authenticated readers; another tenant's ID returns 404.
+The server derives the target and timing from the retained incident, rather than
+accepting a client-supplied metric, tenant or time. Reports use the 168 completed
+UTC hours before opening, a 6-hour recent period, and candidate leads from 0–6
+hours. The partial opening hour and all later observations are excluded. Even
+provider readers compare only metrics belonging to the incident's tenant; the
+existing 64-candidate and five full-pair-evidence bounds apply.
+
+The response contains `incident`, `generated_at`, `context`, and `report`.
+The JSON download includes all four, with hourly and aligned-pair fingerprints.
+Incident lifecycle fields reflect the request-time snapshot. Rule settings and
+opening time come from the retained incident snapshot. Calculations use currently
+retained history and current metric labels, so this is reconstructed evidence,
+not a persisted opening-time report. Retention expiry can remove samples or the
+incident itself; missing hours remain missing and may yield a warming result.
+A short threshold breach need not produce a sustained hourly shift. Associations
+remain exploratory and do not establish root cause. If the target is removed or
+its current tenant or display unit differs from the incident snapshot, return 409
+rather than reinterpret it. No acknowledgement or lifecycle state is changed.

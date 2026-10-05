@@ -3,6 +3,7 @@ import { api, type AnalyticsMetric, type WatchRule, type WatchView } from '../ap
 import { useApi } from '../hooks';
 import { useWho } from '../session';
 import { Card, Empty, ErrorNote, Pill } from './ui';
+import IncidentInvestigationPanel from './IncidentInvestigation';
 
 const blank = {id:'',name:'',metric:'',operator:'above' as 'above'|'below',threshold:'0',for_seconds:300,clear_seconds:60,max_gap_seconds:120,enabled:true,version:0};
 export default function WatchInbox() {
@@ -45,6 +46,7 @@ export default function WatchInbox() {
    <p className="small">Opened {new Date(i.opened_at).toLocaleString()}. Last recorded evidence: {measure(i.value)} {i.rule.unit} at {new Date(i.observed_at).toLocaleString()}.</p>
    {i.acknowledged_by ? <p className="small">Acknowledged by {i.acknowledged_by}: {i.acknowledgement_note}</p> : null}
    {i.resolved_at ? <p className="small">Resolved {new Date(i.resolved_at).toLocaleString()}: {i.resolve_reason}</p> : null}
+   <IncidentInvestigationPanel id={i.id} />
    {canAck && i.status==='open' ? <button className="btn-secondary" disabled={busy} onClick={()=>{setAck(i.id);setAckNote('');setNote('');}}>Acknowledge {i.id}</button> : null}
    {ack===i.id && i.status==='open' ? <form onSubmit={acknowledge}><label>Acknowledgement note<textarea aria-label="Acknowledgement note" required maxLength={500} value={ackNote} onChange={e=>setAckNote(e.target.value)} /></label><button className="btn-secondary" disabled={busy||!ackNote.trim()}>Confirm acknowledgement</button><button type="button" className="btn-secondary" onClick={()=>setAck(null)}>Cancel acknowledgement</button></form> : null}
   </details>)}
