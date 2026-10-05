@@ -52,6 +52,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/rollout"
 	"github.com/zyvorai/zyntra/internal/sim"
 	"github.com/zyvorai/zyntra/internal/tlsutil"
+	"github.com/zyvorai/zyntra/internal/watch"
 	"github.com/zyvorai/zyntra/web"
 )
 
@@ -471,7 +472,14 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		history.Close()
 		return nil, nil, fmt.Errorf("knowledge: %w", err)
 	}
+	watches, err := watch.Open(filepath.Join(stateDir, "watches.sqlite"))
+	if err != nil {
+		history.Close()
+		docs.Close()
+		return nil, nil, fmt.Errorf("watches: %w", err)
+	}
 	opts := api.Options{
+		Watches:   watches,
 		Knowledge: docs,
 		Ontology:  ont,
 		Rollouts:  rollouts,
