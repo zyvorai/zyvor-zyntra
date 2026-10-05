@@ -31,6 +31,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/gaps"
 	"github.com/zyvorai/zyntra/internal/graph"
 	"github.com/zyvorai/zyntra/internal/inputs"
+	"github.com/zyvorai/zyntra/internal/knowledge"
 	"github.com/zyvorai/zyntra/internal/planner"
 	"github.com/zyvorai/zyntra/internal/policy"
 	"github.com/zyvorai/zyntra/internal/rollout"
@@ -67,7 +68,8 @@ type KeepBridge interface {
 }
 
 type Options struct {
-	Model *graph.Model
+	Knowledge *knowledge.Store
+	Model     *graph.Model
 	// Packs lists every pack this instance serves; nil for a single pack.
 	Packs    []PackInfo
 	Refresh  RefreshFunc
@@ -210,6 +212,9 @@ func (s *Server) aiSnapshot(owner ...string) ai.Snapshot {
 // Run refreshes the model and records history every interval until ctx ends.
 func (s *Server) Run(ctx context.Context) {
 	defer s.opt.History.Close()
+	if s.opt.Knowledge != nil {
+		defer s.opt.Knowledge.Close()
+	}
 	t := time.NewTicker(s.opt.Interval)
 	defer t.Stop()
 	saveEvery := 0
@@ -339,6 +344,11 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/inputs", read(s.handleInputs))
 	mux.Handle("POST /api/v1/ingest/{name}", s.opt.Auth.Require(http.HandlerFunc(s.handleIngest), auth.Ingesters...))
 
+	mux.Handle("GET /api/v1/knowledge/documents", read(s.handleDocuments))
+	mux.Handle("GET /api/v1/knowledge/documents/{id}", read(s.handleDocument))
+	mux.Handle("GET /api/v1/knowledge/search", read(s.handleDocumentSearch))
+	mux.Handle("PUT /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentPut), auth.Admins...))
+	mux.Handle("DELETE /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentDelete), auth.Admins...))
 	mux.Handle("GET /api/v1/ai/status", read(s.handleAIStatus))
 	mux.Handle("GET /api/v1/ai/digest", read(s.handleAIDigest))
 	mux.Handle("GET /api/v1/ai/insights", read(s.handleAIInsights))
@@ -693,6 +703,7 @@ func (s *Server) handleAIInsights(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) handleAIAsk(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Question string `json:"question"`
+		Scope    string `json:"scope"`
 	}
 	if !decode(w, r, &req) {
 		return
@@ -700,6 +711,23 @@ func (s *Server) handleAIAsk(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(req.Question)
 	if q == "" || len(q) > 2000 {
 		writeErr(w, http.StatusBadRequest, "question must be 1-2000 characters")
+		return
+	}
+
+	if req.Scope != "" && req.Scope != "documents" {
+		writeErr(w, 400, "scope must be documents or empty")
+		return
+	}
+	if req.Scope == "documents" || ai.WantsDocuments(q) {
+		if !s.knowledgeReady(w) {
+			return
+		}
+		hits, err := s.opt.Knowledge.Search(q, documentReader(r), 5)
+		if err != nil {
+			knowledgeErr(w, err)
+			return
+		}
+		writeJSON(w, 200, s.opt.AI.Documents(r.Context(), q, hits))
 		return
 	}
 	snap := s.aiSnapshot()

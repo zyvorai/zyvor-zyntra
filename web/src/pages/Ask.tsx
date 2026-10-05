@@ -4,6 +4,7 @@ import { api, type AIStatus, type Answer, type Draft, type OntActionType, type P
 import { useApi } from '../hooks';
 import { Card, PageHero, Pill } from '../components/ui';
 import { openObject } from '../nav';
+import KnowledgePanel from '../components/KnowledgePanel';
 
 interface Turn { q: string; a?: Answer; error?: string }
 
@@ -20,6 +21,7 @@ export default function Ask() {
   const st = useApi<AIStatus>('/api/v1/ai/status');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [q, setQ] = useState('');
+  const [scope, setScope] = useState('');
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement | null>(null);
 
@@ -34,7 +36,7 @@ export default function Ask() {
     setBusy(true);
     setTurns((t) => [...t, { q: text }]);
     try {
-      const a = await api<Answer>('/api/v1/ai/ask', { method: 'POST', json: { question: text } });
+      const a = await api<Answer>('/api/v1/ai/ask', { method: 'POST', json: { question: text, scope } });
       setTurns((t) => t.map((x, i) => (i === t.length - 1 ? { ...x, a } : x)));
     } catch (e) {
       setTurns((t) => t.map((x, i) => (i === t.length - 1 ? { ...x, error: (e as Error).message } : x)));
@@ -56,7 +58,7 @@ export default function Ask() {
         tint="purple"
         lede={
           <>
-            Answers are grounded in the live model, gaps, plan, anomalies and forecasts
+            Answers use the live model or the documents you are permitted to read
             {st.data?.mode === 'llm' ? ` and phrased by ${st.data.model || 'the Fabric AI gateway'}` : ''}. Zyntra AI is read-only — it never
             changes anything.
           </>
@@ -101,6 +103,9 @@ export default function Ask() {
                         </ul>
                       </details>
                     ) : null}
+                    {t.a.document_citations?.length ? <details className="trace" open><summary>Document citations ({t.a.document_citations.length})</summary><ul>
+                     {t.a.document_citations.map((c,j) => <li key={j}><strong>[{j+1}] {c.title}</strong> · v{c.version} · lines {c.start_line}–{c.end_line}<p className="muted small">{c.source || 'Manually supplied source'} · SHA-256 {c.sha256}</p><pre className="code">{c.excerpt}</pre></li>)}
+                    </ul></details> : null}
                     {t.a.grounding?.length ? (
                       <details className="trace">
                         <summary>Grounding ({t.a.grounding.length})</summary>
@@ -122,6 +127,7 @@ export default function Ask() {
             <div ref={end} />
           </div>
         )}
+        <label>Answer from<select aria-label="Answer source" value={scope} onChange={e => setScope(e.target.value)}><option value="">Operational model (documents when requested)</option><option value="documents">Document knowledge</option></select></label>
         <form className="ask-form" onSubmit={onSubmit}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about gaps, plans, anomalies, forecasts…" aria-label="Your question" maxLength={2000} autoFocus />
           <button className="primary" type="submit" disabled={busy || !q.trim()}>
@@ -129,6 +135,7 @@ export default function Ask() {
           </button>
         </form>
       </Card>
+      <KnowledgePanel />
       <DraftProposal />
     </>
   );

@@ -67,6 +67,21 @@ expect "ai digest" '"intent": "digest"' api "http://127.0.0.1:$PORT/api/v1/ai/di
 expect "ai ask" '"intent": "plan"' api -X POST -H 'Content-Type: application/json' \
   -d '{"question":"what should we do first?"}' "http://127.0.0.1:$PORT/api/v1/ai/ask"
 
+# The running binary stores and retrieves cited document evidence without acting.
+expect "knowledge create" '"version": 1' api -X PUT -H 'Content-Type: application/json' \
+  -d '{"expected_version":0,"document":{"title":"Inventory SOP","visibility":"provider","text":"Reorder inventory at ten units.","source":"E2E fixture"}}' \
+  "http://127.0.0.1:$PORT/api/v1/knowledge/documents/inventory"
+expect "knowledge search" '"document": "inventory"' api "http://127.0.0.1:$PORT/api/v1/knowledge/search?q=inventory"
+expect "knowledge ask citations" '"document_citations"' api -X POST -H 'Content-Type: application/json' \
+  -d '{"question":"When to reorder inventory?","scope":"documents"}' "http://127.0.0.1:$PORT/api/v1/ai/ask"
+expect "knowledge source revision" '"sha256"' api "http://127.0.0.1:$PORT/api/v1/knowledge/documents/inventory?version=1"
+[ "$(code -X PUT "${auth[@]}" -H 'Content-Type: application/json' \
+  -d '{"expected_version":0,"document":{"title":"Inventory SOP","text":"Different inventory procedure"}}' \
+  "http://127.0.0.1:$PORT/api/v1/knowledge/documents/inventory")" = 409 ] || fail "stale document update must conflict"
+expect "knowledge deletion" '"deleted": true' api -X DELETE -H 'Content-Type: application/json' \
+  -d '{"expected_version":1}' "http://127.0.0.1:$PORT/api/v1/knowledge/documents/inventory"
+[ "$(code "${auth[@]}" "http://127.0.0.1:$PORT/api/v1/knowledge/documents/inventory?version=1")" = 404 ] || fail "deleted citation must be unavailable"
+
 # raise-inference-priority is a typed action in the gpu ontology: it needs the service it acts on.
 [ "$(code -X POST "${auth[@]}" -H 'Content-Type: application/json' -d '{"action":"raise-inference-priority"}' \
   "http://127.0.0.1:$PORT/api/v1/proposals")" = 422 ] || fail "a typed action without its object input must be refused"
