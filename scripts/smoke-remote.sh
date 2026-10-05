@@ -205,6 +205,22 @@ if c != 200 or not a.get("text"):
     fail(f"Ask analytics {c}: {a}")
 ok("Ask scope=analytics answered" + (" with a validated query" if a.get("analytics_query") else " (guidance)"))
 
+c, inv = call("POST", "/api/v1/analytics/investigate", {"metric": metrics[0], "window_hours": 168, "recent_hours": 6, "max_lag_hours": 6})
+if c != 200 or not isinstance(inv, dict):
+    fail(f"investigation HTTP {c}: {inv}")
+shift = inv.get("shift") or {}
+cmp = inv.get("comparisons") or []
+assoc = sum(1 for x in cmp if x.get("status") == "associated")
+ok(f"investigation {metrics[0]}: shift {shift.get('status')}{' (' + shift['reason'] + ')' if shift.get('reason') else ''} · "
+   f"{len(inv.get('hours') or [])} observed hours · {len(cmp)}/{inv.get('candidate_total')} candidates compared, {assoc} associated")
+c, r = call("POST", "/api/v1/analytics/investigate", {"metric": metrics[0], "window_hours": 168, "recent_hours": 6, "max_lag_hours": 6, "candidates": metrics[:1]})
+if c != 400:
+    fail(f"investigation with target as candidate returned {c}, want 400")
+c, a = call("POST", "/api/v1/ai/ask", {"question": f"investigate {metrics[0]}", "scope": "investigation"})
+if c != 200 or not a.get("text"):
+    fail(f"Ask investigation {c}: {a}")
+ok("Ask scope=investigation answered")
+
 doc = f"smoke-{int(time.time())}"
 c, r = call("PUT", f"/api/v1/knowledge/documents/{doc}", {"expected_version": 0, "document": {
     "title": "Smoke test note", "source": "smoke-remote.sh", "visibility": "shared",
