@@ -460,6 +460,10 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 	if ont.Store != nil {
 		ont.Store.Audit = func(subject, by, note string) { _ = store.Note(subject, by, note) }
 	}
+	history, err := ai.OpenHistory(stateDir)
+	if err != nil {
+		return nil, nil, err
+	}
 	opts := api.Options{
 		Ontology: ont,
 		Rollouts: rollouts,
@@ -468,7 +472,7 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		Packs:   packs,
 		Policy:  pol,
 		AI:      engine,
-		History: ai.NewHistory(0),
+		History: history,
 		Store:   store,
 		Inputs:  in,
 		Executor: &executor.Executor{Mode: mode, Run: kubeRunner(c.kubeconfig),

@@ -7,6 +7,7 @@
 package ai
 
 import (
+	"database/sql"
 	"math"
 	"sort"
 	"sync"
@@ -22,9 +23,12 @@ type Point struct {
 
 // History is a bounded per-KPI time series.
 type History struct {
-	mu   sync.RWMutex
-	max  int
-	data map[string][]Point
+	mu           sync.RWMutex
+	max          int
+	data         map[string][]Point
+	db           *sql.DB
+	interval     time.Duration
+	persistError string
 }
 
 func NewHistory(max int) *History {
@@ -40,15 +44,33 @@ func NewHistory(max int) *History {
 func (h *History) Record(m *graph.Model, t time.Time, skip ...map[string]bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	batch := map[string]Point{}
 	for _, k := range m.KPIs {
 		if len(skip) > 0 && skip[0][k.ID] {
 			continue
 		}
-		s := append(h.data[k.ID], Point{t, k.Value})
-		if len(s) > h.max {
-			s = s[len(s)-h.max:]
+		if math.IsNaN(k.Value) || math.IsInf(k.Value, 0) || t.IsZero() {
+			continue
 		}
-		h.data[k.ID] = s
+		series := h.data[k.ID]
+		if len(series) > 0 && (t.Sub(series[len(series)-1].T) < h.interval || !t.After(series[len(series)-1].T)) {
+			continue
+		}
+		batch[k.ID] = Point{t.UTC(), k.Value}
+	}
+	if err := h.persist(batch); err != nil {
+		h.persistError = err.Error()
+		return
+	}
+	if len(batch) > 0 {
+		h.persistError = ""
+	}
+	for id, pt := range batch {
+		series := append(h.data[id], pt)
+		if len(series) > h.max {
+			series = series[len(series)-h.max:]
+		}
+		h.data[id] = series
 	}
 }
 
@@ -73,10 +95,11 @@ func (h *History) Restore(d map[string][]Point) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for k, v := range d {
+		v = cleanPoints(v)
 		if len(v) > h.max {
 			v = v[len(v)-h.max:]
 		}
-		h.data[k] = append([]Point(nil), v...)
+		h.data[k] = v
 	}
 }
 
