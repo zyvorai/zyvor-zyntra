@@ -3,6 +3,8 @@ import { useApi } from '../hooks';
 import type { Page } from '../nav';
 import { Card, Empty, ErrorNote, PageHero, Pill } from '../components/ui';
 
+import KPIInvestigation from '../components/KPIInvestigation';
+
 const fcTone = { breach: 'bad', 'at-risk': 'warn', improving: 'ok', stable: 'neutral' } as const;
 
 /** How well past predictions matched what happened, and suggested weight fixes. */
@@ -127,6 +129,7 @@ export default function Insights({ setPage }: { setPage: (p: Page) => void }) {
         </Card>
       </div>
       {ins.data?.analytics ? <Analytics data={ins.data.analytics} /> : null}
+      <KPIInvestigation />
       <Calibration />
     </>
   );

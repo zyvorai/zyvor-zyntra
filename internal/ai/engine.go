@@ -95,6 +95,7 @@ type Engine struct {
 }
 
 type Answer struct {
+	Investigation     *InvestigationReport `json:"investigation,omitempty"`
 	AnalyticsQuery    *QueryResult         `json:"analytics_query,omitempty"`
 	DocumentCitations []knowledge.Citation `json:"document_citations,omitempty"`
 	Text              string               `json:"text"`

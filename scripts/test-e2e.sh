@@ -77,6 +77,16 @@ expect "analytics Ask" '"analytics_query"' api -X POST -H 'Content-Type: applica
   -d '{"metrics":["gravia_pending_jobs"],"operation":"mean","window_hours":24,"sql":"select *"}' \
   "http://127.0.0.1:$PORT/api/v1/analytics/query")" = 400 ] || fail "unknown query fields must fail"
 
+# Short lab history must produce honest warming diagnostics, not a guessed cause.
+expect "investigation warming" '"status": "warming"' api -X POST -H 'Content-Type: application/json' \
+  -d '{"metric":"gravia_pending_jobs","window_hours":72,"recent_hours":6,"max_lag_hours":6}' \
+  "http://127.0.0.1:$PORT/api/v1/analytics/investigate"
+expect "investigation Ask" '"investigation"' api -X POST -H 'Content-Type: application/json' \
+  -d '{"question":"investigate gravia_pending_jobs","scope":"investigation"}' "http://127.0.0.1:$PORT/api/v1/ai/ask"
+[ "$(code -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+  -d '{"metric":"gravia_pending_jobs","window_hours":72,"recent_hours":6,"max_lag_hours":6,"candidates":["not-a-kpi"]}' \
+  "http://127.0.0.1:$PORT/api/v1/analytics/investigate")" = 400 ] || fail "unknown investigation candidates must fail"
+
 # The running binary stores and retrieves cited document evidence without acting.
 expect "knowledge create" '"version": 1' api -X PUT -H 'Content-Type: application/json' \
   -d '{"expected_version":0,"document":{"title":"Inventory SOP","visibility":"provider","text":"Reorder inventory at ten units.","source":"E2E fixture"}}' \

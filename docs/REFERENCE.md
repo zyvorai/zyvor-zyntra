@@ -521,3 +521,5 @@ See [SECURITY.md](../SECURITY.md) and [CONTRIBUTING.md](../CONTRIBUTING.md). Soc
 
 
 See [KPI analytics queries](ANALYTICS_QUERIES.md) for `/api/v1/analytics/catalog`, `/api/v1/analytics/query` and Ask with `scope: "analytics"`.
+
+See [KPI investigations](INVESTIGATIONS.md) for `/api/v1/analytics/investigate`, sustained level shifts, lagged change evidence and Ask with `scope: "investigation"`.

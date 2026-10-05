@@ -36,6 +36,7 @@ Recent work on `main` (released versions are on the [releases page](https://gith
 | Area | What shipped |
 |---|---|
 | Document knowledge | Versioned text/Markdown sources, tenant and role filters, lexical retrieval and cited excerpts in Ask; [details](docs/KNOWLEDGE.md) |
+| KPI investigations | Sustained shift detection, lagged change associations and downloadable evidence in Insights and Ask; [methods and limits](docs/INVESTIGATIONS.md) |
 | KPI analytics queries | Permission-scoped natural-language averages, changes and trends with validated queries and sample evidence; [details](docs/ANALYTICS_QUERIES.md) |
 | Analytics foundation | Transactional KPI history, robust anomalies, daily/weekly seasonal projections and rolling backtests in Insights and Ask; [details and limits](docs/ANALYTICS.md) |
 | Several packs, one instance | `serve -f a,b` gives each pack its own KPI graph, ontology, approvals and audit chain, with shared sign-in and policy and a console pack switcher |

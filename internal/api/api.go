@@ -351,6 +351,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentDelete), auth.Admins...))
 	mux.Handle("GET /api/v1/analytics/catalog", read(s.handleAnalyticsCatalog))
 	mux.Handle("POST /api/v1/analytics/query", read(s.handleAnalyticsQuery))
+	mux.Handle("POST /api/v1/analytics/investigate", read(s.handleAnalyticsInvestigation))
 	mux.Handle("GET /api/v1/ai/status", read(s.handleAIStatus))
 	mux.Handle("GET /api/v1/ai/digest", read(s.handleAIDigest))
 	mux.Handle("GET /api/v1/ai/insights", read(s.handleAIInsights))
@@ -716,8 +717,19 @@ func (s *Server) handleAIAsk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Scope != "" && req.Scope != "documents" && req.Scope != "analytics" {
-		writeErr(w, 400, "scope must be documents, analytics or empty")
+	if req.Scope != "" && req.Scope != "documents" && req.Scope != "analytics" && req.Scope != "investigation" {
+		writeErr(w, 400, "scope must be documents, analytics, investigation or empty")
+		return
+	}
+	if req.Scope == "investigation" {
+		catalog := s.queryCatalog(r)
+		request, err := ai.InvestigationQuestion(q, catalog)
+		history := map[string][]ai.Point{}
+		if err == nil {
+			ids, _ := ai.InvestigationMetrics(request, catalog)
+			history = s.opt.History.QueryHistory(ids)
+		}
+		writeJSON(w, 200, ai.InvestigationAnswer(q, catalog, history, time.Now()))
 		return
 	}
 	if req.Scope == "analytics" {
