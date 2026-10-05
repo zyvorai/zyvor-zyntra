@@ -370,6 +370,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /api/v1/watches/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWatchPut), auth.Admins...))
 	mux.Handle("DELETE /api/v1/watches/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWatchDelete), auth.Admins...))
 	mux.Handle("POST /api/v1/watch-incidents/{id}/acknowledge", propose(s.handleWatchAcknowledge))
+	mux.Handle("GET /api/v1/watch-incidents/{id}/investigation", read(s.handleIncidentInvestigation))
 	mux.Handle("GET /api/v1/analytics/catalog", read(s.handleAnalyticsCatalog))
 	mux.Handle("POST /api/v1/analytics/query", read(s.handleAnalyticsQuery))
 	mux.Handle("POST /api/v1/analytics/investigate", read(s.handleAnalyticsInvestigation))

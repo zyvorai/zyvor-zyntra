@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import Ask from '../pages/Ask';
+import IncidentInvestigationPanel from '../components/IncidentInvestigation';
 import KPIInvestigation, { InvestigationEvidence } from '../components/KPIInvestigation';
 import { mockApi } from '../test/mock';
 import { unnamedControls } from '../test/a11y';
@@ -74,4 +75,33 @@ it('shows missing history and candidate truncation without inventing a result',(
  expect(screen.getByText('Candidate search capped at 64 of 80 permitted metrics, selected by metric ID.')).toBeTruthy();
  expect(screen.getByText('No usable completed hours.')).toBeTruthy();
  expect(screen.queryByRole('table')).toBeNull();
+});
+
+it('loads incident evidence only on request and clears it after a failed rerun',async()=>{
+ let runs=0;
+ const incident={id:'watch-2',opened_at:'2026-10-05T12:30:00Z',status:'resolved',rule:{version:1}};
+ const envelope={incident,generated_at:'2026-10-05T15:00:00Z',context:'Historical context before incident opening; partial opening hour excluded.',report};
+ const calls=mockApi({'GET /api/v1/watch-incidents/watch-2/investigation':()=>++runs===1?envelope:{status:409,body:{error:'Incident metric unavailable'}}});
+ const {container}=render(<IncidentInvestigationPanel id="watch-2" />);
+ expect(calls).toEqual([]);
+ fireEvent.click(screen.getByRole('button',{name:'Investigate watch-2'}));
+ expect(await screen.findByText(envelope.context)).toBeTruthy();
+ expect(screen.getByText('Sustained shift up')).toBeTruthy();
+ expect(unnamedControls(container)).toEqual([]);
+ fireEvent.click(screen.getByRole('button',{name:'Hide investigation watch-2'}));
+ expect(screen.queryByText('Sustained shift up')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Investigate watch-2'}));
+ expect(await screen.findByText('Incident metric unavailable')).toBeTruthy();
+ expect(screen.queryByText('Sustained shift up')).toBeNull();
+});
+it('exports incident identity and opening context with the analytical report',async()=>{
+ const envelope={incident:{id:'watch-2',opened_at:'2026-10-05T12:30:00Z',rule:{version:1}},report};
+ const create=vi.fn((_blob:Blob)=>'blob:incident');const OriginalURL=URL;
+ vi.stubGlobal('URL',class extends OriginalURL {static createObjectURL=create;static revokeObjectURL=vi.fn()});
+ let filename='';vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(this:HTMLAnchorElement){filename=this.download});
+ render(<InvestigationEvidence report={report} exportValue={envelope} filename="zyntra-incident-watch-2.json" />);
+ fireEvent.click(screen.getByRole('button',{name:'Download investigation JSON'}));
+ const blob=create.mock.calls[0][0];
+ const text=await new Promise<string>(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.readAsText(blob)});
+ expect(JSON.parse(text)).toEqual(envelope);expect(filename).toBe('zyntra-incident-watch-2.json');
 });
