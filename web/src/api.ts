@@ -175,7 +175,16 @@ export interface Forecast {
   samples: number;
   text: string;
 }
+export interface AnalyticsMetric { id: string; name: string; unit: string; warning?: string }
+export interface AnalyticsQuery { metrics: string[]; operation: string; window_hours: number; bucket_hours?: number }
+export interface AnalyticsQueryResult {
+  query: AnalyticsQuery; start: string; end: string; method: string;
+  rows: (AnalyticsMetric & { value: number | null; samples: number; note?: string; sha256?: string;
+    first?: { t: string; v: number }; last?: { t: string; v: number };
+    buckets?: { start: string; end: string; value: number; samples: number }[] })[];
+}
 export interface Answer {
+ analytics_query?: AnalyticsQueryResult;
  document_citations?: DocumentCitation[];
   text: string;
   intent: string;

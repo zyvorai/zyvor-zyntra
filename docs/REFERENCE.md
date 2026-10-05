@@ -515,3 +515,5 @@ make helm-lint  # lint the chart and render it with every option on
 
 See [SECURITY.md](../SECURITY.md) and [CONTRIBUTING.md](../CONTRIBUTING.md). Social and README images are rebuilt from HTML; see [docs/social](social/README.md).
 
+
+See [KPI analytics queries](ANALYTICS_QUERIES.md) for `/api/v1/analytics/catalog`, `/api/v1/analytics/query` and Ask with `scope: "analytics"`.
