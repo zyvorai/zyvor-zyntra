@@ -36,6 +36,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/policy"
 	"github.com/zyvorai/zyntra/internal/rollout"
 	"github.com/zyvorai/zyntra/internal/sim"
+	"github.com/zyvorai/zyntra/internal/watch"
 )
 
 const maxBody = 1 << 20
@@ -69,6 +70,7 @@ type KeepBridge interface {
 
 type Options struct {
 	Knowledge *knowledge.Store
+	Watches   *watch.Store
 	Model     *graph.Model
 	// Packs lists every pack this instance serves; nil for a single pack.
 	Packs    []PackInfo
@@ -212,6 +214,9 @@ func (s *Server) aiSnapshot(owner ...string) ai.Snapshot {
 // Run refreshes the model and records history every interval until ctx ends.
 func (s *Server) Run(ctx context.Context) {
 	defer s.opt.History.Close()
+	if s.opt.Watches != nil {
+		defer s.opt.Watches.Close()
+	}
 	if s.opt.Knowledge != nil {
 		defer s.opt.Knowledge.Close()
 	}
@@ -280,6 +285,18 @@ func (s *Server) RefreshOnce(ctx context.Context) {
 	}
 	s.mu.Unlock()
 	s.opt.History.Record(m, now, held)
+	if s.opt.Watches != nil {
+		observations := map[string]watch.Observation{}
+		for _, f := range s.freshness(m) {
+			k, ok := m.KPI(f.KPI)
+			if ok && s.opt.Refresh != nil && k.Live() && f.Status == freshness.Fresh && f.LastError == "" && f.LastSuccess != nil && !held[k.ID] {
+				observations[k.ID] = watch.Observation{At: *f.LastSuccess, Value: k.Value, Valid: true, Tenant: k.Tenant}
+			}
+		}
+		if err := s.opt.Watches.Evaluate(observations, now); err != nil {
+			log.Printf("watches: %v", err)
+		}
+	}
 }
 
 func (s *Server) historyPath() string {
@@ -349,6 +366,10 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/knowledge/search", read(s.handleDocumentSearch))
 	mux.Handle("PUT /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentPut), auth.Admins...))
 	mux.Handle("DELETE /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentDelete), auth.Admins...))
+	mux.Handle("GET /api/v1/watches", read(s.handleWatches))
+	mux.Handle("PUT /api/v1/watches/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWatchPut), auth.Admins...))
+	mux.Handle("DELETE /api/v1/watches/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWatchDelete), auth.Admins...))
+	mux.Handle("POST /api/v1/watch-incidents/{id}/acknowledge", propose(s.handleWatchAcknowledge))
 	mux.Handle("GET /api/v1/analytics/catalog", read(s.handleAnalyticsCatalog))
 	mux.Handle("POST /api/v1/analytics/query", read(s.handleAnalyticsQuery))
 	mux.Handle("POST /api/v1/analytics/investigate", read(s.handleAnalyticsInvestigation))

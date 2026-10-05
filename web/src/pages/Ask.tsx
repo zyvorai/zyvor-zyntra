@@ -5,6 +5,7 @@ import { useApi } from '../hooks';
 import { Card, PageHero, Pill } from '../components/ui';
 import { openObject } from '../nav';
 import KnowledgePanel from '../components/KnowledgePanel';
+import WatchInbox from '../components/WatchInbox';
 import AnalyticsQueryPanel from '../components/AnalyticsQueryPanel';
 import { InvestigationEvidence } from '../components/KPIInvestigation';
 import type { AnalyticsMetric } from '../api';
@@ -145,6 +146,7 @@ export default function Ask() {
           </button>
         </form>
       </Card>
+      <WatchInbox />
       <KnowledgePanel />
       <DraftProposal />
     </>

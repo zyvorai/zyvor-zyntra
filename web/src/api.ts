@@ -745,3 +745,11 @@ export interface DocumentCitation {
  document: string; title: string; source: string; version: number; sha256: string;
  start_line: number; end_line: number; excerpt: string; score: number;
 }
+
+export interface WatchRule { id: string; name: string; metric: string; metric_name: string; unit: string; tenant?: string;
+ operator: 'above' | 'below'; threshold: number; for_seconds: number; clear_seconds: number; max_gap_seconds: number; enabled: boolean;
+ version: number; updated_at: string; updated_by: string }
+export interface WatchIncident { id: string; rule: WatchRule; version: number; status: 'open' | 'acknowledged' | 'resolved'; opened_at: string;
+ observed_at: string; value: number; acknowledged_at?: string; acknowledged_by?: string; acknowledgement_note?: string; resolved_at?: string; resolve_reason?: string }
+export interface WatchView { rules: WatchRule[]; runtime: Record<string, {status: string; active_incident?: string; last_observed_at?: string; last_value?: number; pending_since?: string; clearing_since?: string}>;
+ incidents: WatchIncident[]; events: {sequence: number; at: string; rule: string; incident?: string; kind: string; by: string; note?: string}[]; persistence_error?: string }
