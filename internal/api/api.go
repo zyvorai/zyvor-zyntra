@@ -349,6 +349,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/knowledge/search", read(s.handleDocumentSearch))
 	mux.Handle("PUT /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentPut), auth.Admins...))
 	mux.Handle("DELETE /api/v1/knowledge/documents/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleDocumentDelete), auth.Admins...))
+	mux.Handle("GET /api/v1/analytics/catalog", read(s.handleAnalyticsCatalog))
+	mux.Handle("POST /api/v1/analytics/query", read(s.handleAnalyticsQuery))
 	mux.Handle("GET /api/v1/ai/status", read(s.handleAIStatus))
 	mux.Handle("GET /api/v1/ai/digest", read(s.handleAIDigest))
 	mux.Handle("GET /api/v1/ai/insights", read(s.handleAIInsights))
@@ -714,8 +716,13 @@ func (s *Server) handleAIAsk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Scope != "" && req.Scope != "documents" {
-		writeErr(w, 400, "scope must be documents or empty")
+	if req.Scope != "" && req.Scope != "documents" && req.Scope != "analytics" {
+		writeErr(w, 400, "scope must be documents, analytics or empty")
+		return
+	}
+	if req.Scope == "analytics" {
+		catalog, history := s.queryContext(r)
+		writeJSON(w, 200, s.opt.AI.QueryAnswer(r.Context(), q, catalog, history, time.Now()))
 		return
 	}
 	if req.Scope == "documents" || ai.WantsDocuments(q) {

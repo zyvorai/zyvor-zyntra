@@ -5,6 +5,8 @@ import { useApi } from '../hooks';
 import { Card, PageHero, Pill } from '../components/ui';
 import { openObject } from '../nav';
 import KnowledgePanel from '../components/KnowledgePanel';
+import AnalyticsQueryPanel from '../components/AnalyticsQueryPanel';
+import type { AnalyticsMetric } from '../api';
 
 interface Turn { q: string; a?: Answer; error?: string }
 
@@ -19,6 +21,7 @@ const suggestions = [
 
 export default function Ask() {
   const st = useApi<AIStatus>('/api/v1/ai/status');
+  const catalog = useApi<{ metrics: AnalyticsMetric[] }>('/api/v1/analytics/catalog');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [q, setQ] = useState('');
   const [scope, setScope] = useState('');
@@ -58,7 +61,7 @@ export default function Ask() {
         tint="purple"
         lede={
           <>
-            Answers use the live model or the documents you are permitted to read
+            Answers use the live model, observed KPI history or the documents you are permitted to read
             {st.data?.mode === 'llm' ? ` and phrased by ${st.data.model || 'the Fabric AI gateway'}` : ''}. Zyntra AI is read-only — it never
             changes anything.
           </>
@@ -103,6 +106,7 @@ export default function Ask() {
                         </ul>
                       </details>
                     ) : null}
+                    {t.a.analytics_query ? <AnalyticsQueryPanel result={t.a.analytics_query} /> : null}
                     {t.a.document_citations?.length ? <details className="trace" open><summary>Document citations ({t.a.document_citations.length})</summary><ul>
                      {t.a.document_citations.map((c,j) => <li key={j}><strong>[{j+1}] {c.title}</strong> · v{c.version} · lines {c.start_line}–{c.end_line}<p className="muted small">{c.source || 'Manually supplied source'} · SHA-256 {c.sha256}</p><pre className="code">{c.excerpt}</pre></li>)}
                     </ul></details> : null}
@@ -127,7 +131,11 @@ export default function Ask() {
             <div ref={end} />
           </div>
         )}
-        <label>Answer from<select aria-label="Answer source" value={scope} onChange={e => setScope(e.target.value)}><option value="">Operational model (documents when requested)</option><option value="documents">Document knowledge</option></select></label>
+        <label>Answer from<select aria-label="Answer source" value={scope} onChange={e => setScope(e.target.value)}><option value="">Operational model (documents when requested)</option><option value="documents">Document knowledge</option><option value="analytics">KPI analytics</option></select></label>
+        {scope === 'analytics' ? <div className="trace"><p className="small">Try “average &lt;metric ID&gt; over the last 24 hours” or “daily trend &lt;metric ID&gt; over the past 7 days”. Up to five metrics; each is calculated separately.</p>
+          {catalog.error ? <p className="error-note">{catalog.error}</p> : <div className="suggestions">{catalog.data?.metrics.map(m => <button key={m.id} className="btn-secondary" disabled={busy} onClick={() => setQ(`average ${m.id} over the last 24 hours`)}>{m.name || m.id} <span className="mono small">({m.id})</span></button>)}</div>}
+          {catalog.data?.metrics.length === 0 ? <p className="muted">No metrics are available for your account in this pack.</p> : null}
+        </div> : null}
         <form className="ask-form" onSubmit={onSubmit}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about gaps, plans, anomalies, forecasts…" aria-label="Your question" maxLength={2000} autoFocus />
           <button className="primary" type="submit" disabled={busy || !q.trim()}>

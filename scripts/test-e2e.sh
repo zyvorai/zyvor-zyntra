@@ -67,6 +67,16 @@ expect "ai digest" '"intent": "digest"' api "http://127.0.0.1:$PORT/api/v1/ai/di
 expect "ai ask" '"intent": "plan"' api -X POST -H 'Content-Type: application/json' \
   -d '{"question":"what should we do first?"}' "http://127.0.0.1:$PORT/api/v1/ai/ask"
 
+# Structured and natural-language queries use observed history and never write.
+expect "analytics catalog" '"max_window_hours": 720' api "http://127.0.0.1:$PORT/api/v1/analytics/catalog"
+expect "analytics query evidence" '"sha256"' api -X POST -H 'Content-Type: application/json' \
+  -d '{"metrics":["gravia_pending_jobs"],"operation":"mean","window_hours":24}' "http://127.0.0.1:$PORT/api/v1/analytics/query"
+expect "analytics Ask" '"analytics_query"' api -X POST -H 'Content-Type: application/json' \
+  -d '{"question":"average gravia_pending_jobs last 24 hours","scope":"analytics"}' "http://127.0.0.1:$PORT/api/v1/ai/ask"
+[ "$(code -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+  -d '{"metrics":["gravia_pending_jobs"],"operation":"mean","window_hours":24,"sql":"select *"}' \
+  "http://127.0.0.1:$PORT/api/v1/analytics/query")" = 400 ] || fail "unknown query fields must fail"
+
 # The running binary stores and retrieves cited document evidence without acting.
 expect "knowledge create" '"version": 1' api -X PUT -H 'Content-Type: application/json' \
   -d '{"expected_version":0,"document":{"title":"Inventory SOP","visibility":"provider","text":"Reorder inventory at ten units.","source":"E2E fixture"}}' \
