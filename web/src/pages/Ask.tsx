@@ -6,6 +6,7 @@ import { Card, PageHero, Pill } from '../components/ui';
 import { openObject } from '../nav';
 import KnowledgePanel from '../components/KnowledgePanel';
 import AnalyticsQueryPanel from '../components/AnalyticsQueryPanel';
+import { InvestigationEvidence } from '../components/KPIInvestigation';
 import type { AnalyticsMetric } from '../api';
 
 interface Turn { q: string; a?: Answer; error?: string }
@@ -106,6 +107,7 @@ export default function Ask() {
                         </ul>
                       </details>
                     ) : null}
+                    {t.a.investigation ? <InvestigationEvidence report={t.a.investigation} /> : null}
                     {t.a.analytics_query ? <AnalyticsQueryPanel result={t.a.analytics_query} /> : null}
                     {t.a.document_citations?.length ? <details className="trace" open><summary>Document citations ({t.a.document_citations.length})</summary><ul>
                      {t.a.document_citations.map((c,j) => <li key={j}><strong>[{j+1}] {c.title}</strong> · v{c.version} · lines {c.start_line}–{c.end_line}<p className="muted small">{c.source || 'Manually supplied source'} · SHA-256 {c.sha256}</p><pre className="code">{c.excerpt}</pre></li>)}
@@ -131,9 +133,9 @@ export default function Ask() {
             <div ref={end} />
           </div>
         )}
-        <label>Answer from<select aria-label="Answer source" value={scope} onChange={e => setScope(e.target.value)}><option value="">Operational model (documents when requested)</option><option value="documents">Document knowledge</option><option value="analytics">KPI analytics</option></select></label>
-        {scope === 'analytics' ? <div className="trace"><p className="small">Try “average &lt;metric ID&gt; over the last 24 hours” or “daily trend &lt;metric ID&gt; over the past 7 days”. Up to five metrics; each is calculated separately.</p>
-          {catalog.error ? <p className="error-note">{catalog.error}</p> : <div className="suggestions">{catalog.data?.metrics.map(m => <button key={m.id} className="btn-secondary" disabled={busy} onClick={() => setQ(`average ${m.id} over the last 24 hours`)}>{m.name || m.id} <span className="mono small">({m.id})</span></button>)}</div>}
+        <label>Answer from<select aria-label="Answer source" value={scope} onChange={e => setScope(e.target.value)}><option value="">Operational model (documents when requested)</option><option value="documents">Document knowledge</option><option value="analytics">KPI analytics</option><option value="investigation">Investigate KPI changes</option></select></label>
+        {scope === 'analytics' || scope === 'investigation' ? <div className="trace"><p className="small">{scope === 'investigation' ? 'Name one target metric, for example “investigate <metric ID>”. Uses the last 168 completed UTC hours, the most recent 6 hours and candidate leads of 0–6 hours. Associations do not establish causes.' : 'Try “average <metric ID> over the last 24 hours” or “daily trend <metric ID> over the past 7 days”. Up to five metrics; each is calculated separately.'}</p>
+          {catalog.error ? <p className="error-note">{catalog.error}</p> : <div className="suggestions">{catalog.data?.metrics.map(m => <button key={m.id} className="btn-secondary" disabled={busy} onClick={() => setQ(scope === 'investigation' ? `investigate ${m.id}` : `average ${m.id} over the last 24 hours`)}>{m.name || m.id} <span className="mono small">({m.id})</span></button>)}</div>}
           {catalog.data?.metrics.length === 0 ? <p className="muted">No metrics are available for your account in this pack.</p> : null}
         </div> : null}
         <form className="ask-form" onSubmit={onSubmit}>

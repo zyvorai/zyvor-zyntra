@@ -18,8 +18,8 @@ func (s *Server) analyticsUnavailable(m *graph.Model) map[string]bool {
 
 	cutoff := time.Now().Add(-max(3*s.opt.Interval, 2*time.Minute))
 	for _, k := range m.KPIs {
-		pts := s.opt.History.Series(k.ID)
-		if len(pts) > 0 && pts[len(pts)-1].T.Before(cutoff) {
+		last, ok := s.opt.History.LatestPoint(k.ID)
+		if ok && last.T.Before(cutoff) {
 			out[k.ID] = true
 		}
 	}

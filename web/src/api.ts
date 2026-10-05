@@ -183,7 +183,19 @@ export interface AnalyticsQueryResult {
     first?: { t: string; v: number }; last?: { t: string; v: number };
     buckets?: { start: string; end: string; value: number; samples: number }[] })[];
 }
+export interface InvestigationRequest { metric: string; window_hours: number; recent_hours: number; max_lag_hours: number; candidates?: string[] }
+export interface InvestigationReport {
+  query: InvestigationRequest; target: AnalyticsMetric; start: string; end: string; sha256: string;
+  method: string; caveat: string; candidate_total: number; candidates_truncated: boolean;
+  hours: { start: string; mean: number; samples: number }[];
+  shift: { status: 'shift' | 'stable' | 'warming' | 'unavailable'; reason?: string; baseline_hours: number; recent_hours: number;
+    baseline_start?: string; recent_start: string; baseline_median?: number; recent_median?: number; delta?: number;
+    threshold?: number; beyond_threshold: number; required_hours: number; direction?: 'up' | 'down' };
+  comparisons: (AnalyticsMetric & { status: 'associated' | 'weak' | 'warming' | 'unavailable'; reason?: string;
+    correlation?: number; lag_hours: number; pairs: number; tested_lags: number; start?: string; end?: string; sha256?: string; evidence?: { at: string; candidate_change: number; target_change: number }[] })[];
+}
 export interface Answer {
+ investigation?: InvestigationReport;
  analytics_query?: AnalyticsQueryResult;
  document_citations?: DocumentCitation[];
   text: string;

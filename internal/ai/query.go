@@ -384,3 +384,14 @@ func (h *History) QueryHistory(ids []string) map[string][]Point {
 	}
 	return out
 }
+
+// LatestPoint checks observation age without copying a retained series.
+func (h *History) LatestPoint(id string) (Point, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	pts := h.data[id]
+	if len(pts) == 0 {
+		return Point{}, false
+	}
+	return pts[len(pts)-1], true
+}
