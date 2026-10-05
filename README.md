@@ -197,6 +197,9 @@ Every capability in this repository is in every edition and is free for non-prod
 
 - [Reference](docs/REFERENCE.md): the model file, sources, packs, console, approvals, policy, configuration, CLI, API and deployment
 - [Business ontology](docs/ONTOLOGY.md): objects, links, scenarios, tenants and rollouts
+- [Analytics foundation](docs/ANALYTICS.md): durable KPI history, robust anomalies, seasonal projections, backtests and their limits
+- [KPI analytics queries](docs/ANALYTICS_QUERIES.md): permission-scoped catalog, structured queries and Ask with `scope: "analytics"`
+- [Document knowledge](docs/KNOWLEDGE.md): versioned, permission-aware documents and cited answers in Ask
 - [Product plan](docs/PRODUCT_PLAN.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 - [Social and README images](docs/social/README.md): how they are rebuilt from HTML
 
