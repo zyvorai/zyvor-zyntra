@@ -701,3 +701,16 @@ export interface OntStats {
   by_type: Record<string, number>;
   object_limit?: number;
 }
+
+export interface AnalyticsReport {
+ persistent: boolean;
+ persistence_error?: string;
+ interval_note: string;
+ anomalies: { kpi: string; name: string; text: string; method: string; score: number; severity: string }[];
+ kpis: {
+  kpi: string; name: string; unit: string; status: string; reason?: string;
+  observations: number; hourly_samples: number; selected?: string;
+  backtests: {method: string; samples: number; mae: number; rmse: number; baseline_mae: number; error_radius: number}[];
+  projections: {at: string; hours: number; value: number; low: number; high: number; breach: boolean}[];
+ }[];
+}

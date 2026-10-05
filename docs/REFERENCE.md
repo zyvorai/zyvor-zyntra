@@ -285,6 +285,8 @@ Agents and scripts should not hold the admin key. `zyntra service-token -name N 
 
 ## AI (grounded, read-only)
 
+See [Analytics foundation](ANALYTICS.md) for persistent KPI history, robust anomalies, seasonal projections, backtests and their limits.
+
 The model drafts and explains. Deterministic code calculates every number, and only a named person approves a run. Every feature below returns YAML to review, a citation into the outcome store, or a payload that still waits in the inbox. With no model configured, each one returns its deterministic answer.
 
 - **Anomalies:** z-score of each KPI against its own history.

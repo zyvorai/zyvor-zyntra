@@ -32,11 +32,15 @@ type Snapshot struct {
 	Objects *ObjectContext `json:"-"`
 	// ObjectsOnly confines Ask to business objects: a tenant-bound caller
 	// gets no KPI, plan, forecast or source answers.
-	ObjectsOnly bool `json:"-"`
+	ObjectsOnly bool             `json:"-"`
+	Analytics   *AnalyticsReport `json:"analytics,omitempty"`
 }
 
 // compact is the JSON the LLM sees: no traces or full model, just facts.
 func (s Snapshot) compact() map[string]any {
+	if s.ObjectsOnly {
+		return map[string]any{}
+	}
 	type rec struct {
 		Rank        int      `json:"rank"`
 		Action      string   `json:"action"`
@@ -67,6 +71,9 @@ func (s Snapshot) compact() map[string]any {
 	}
 	if p := s.pack(); p != "" {
 		out["pack"] = p
+	}
+	if s.Analytics != nil {
+		out["analytics"] = s.Analytics
 	}
 	return out
 }
@@ -169,6 +176,8 @@ func answer(q string, s Snapshot) Answer {
 		}
 	}
 	switch {
+	case has("seasonal", "backtest", "forecast accuracy", "robust anomaly", "robust anomalies"):
+		return analyticsAnswer(s)
 	case has("anomal", "unusual", "spike", "strange", "weird"):
 		return anomalyAnswer(s)
 	case has("forecast", "trend", "when will", "predict", "going to", "breach soon", "at risk"):
@@ -490,4 +499,33 @@ func (e *Engine) ChooseColumn(ctx context.Context, a graph.Action, name string, 
 		return "", err
 	}
 	return out.Column, nil
+}
+
+// analyticsAnswer quotes calculated projections and their historical errors.
+func analyticsAnswer(s Snapshot) Answer {
+	a := Answer{Intent: "analytics"}
+	if s.Analytics == nil {
+		a.Text = "Advanced analytics is unavailable in this snapshot."
+		return a
+	}
+	var parts []string
+	for _, k := range s.Analytics.KPIs {
+		if k.Status != "ready" {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s uses %s, selected by the lowest one-hour backtest MAE across 24 historical origins.", k.Name, k.Selected))
+		for _, p := range k.Projections {
+			parts = append(parts, fmt.Sprintf("At %s (%dh): %.4g%s, empirical band %.4g to %.4g.", p.At.Format(time.RFC3339), p.Hours, p.Value, unitSuffix(k.Unit), p.Low, p.High))
+		}
+		a.Grounding = append(a.Grounding, "analytics:"+k.KPI)
+		if len(a.Grounding) == 3 {
+			break
+		}
+	}
+	if len(parts) == 0 {
+		a.Text = "No advanced forecast is ready: inputs must be current and have 72 consecutive completed hourly buckets."
+		return a
+	}
+	a.Text = strings.Join(parts, " ") + " " + s.Analytics.IntervalNote
+	return a
 }

@@ -198,8 +198,10 @@ func (s *Server) aiSnapshot(owner ...string) ai.Snapshot {
 		plan = planner.ForOwner(m, plan, owner[0])
 		g = gaps.ForOwner(g, owner[0])
 	}
+	analytics := ai.Analytics(m, s.opt.History, s.analyticsUnavailable(m))
 	return ai.Snapshot{
-		Model: m, Gaps: g, Severity: gaps.Total(m, nil), Plan: plan.Recommendations,
+		Analytics: &analytics,
+		Model:     m, Gaps: g, Severity: gaps.Total(m, nil), Plan: plan.Recommendations,
 		Anomalies: ai.Anomalies(m, s.opt.History), Forecasts: ai.Forecasts(m, s.opt.History),
 		Sources: s.sourceStatus(),
 	}
@@ -207,6 +209,7 @@ func (s *Server) aiSnapshot(owner ...string) ai.Snapshot {
 
 // Run refreshes the model and records history every interval until ctx ends.
 func (s *Server) Run(ctx context.Context) {
+	defer s.opt.History.Close()
 	t := time.NewTicker(s.opt.Interval)
 	defer t.Stop()
 	saveEvery := 0
@@ -239,6 +242,15 @@ func (s *Server) RefreshOnce(ctx context.Context) {
 		if err != nil {
 			log.Printf("refresh: %v", err)
 		}
+
+		for _, k := range m.KPIs {
+			if k.Live() {
+				u, ok := rep.KPIs[k.ID]
+				if !ok || !u.OK {
+					held[k.ID] = true
+				}
+			}
+		}
 		st = rep.Sources
 		for id, u := range rep.KPIs {
 			switch {
@@ -248,8 +260,10 @@ func (s *Server) RefreshOnce(ctx context.Context) {
 				s.fresh.Held(id)
 				held[id] = true
 			case u.Warming:
+				held[id] = true
 				s.fresh.Warming(id)
 			default:
+				held[id] = true
 				s.fresh.Failure(id, u.Error, now)
 			}
 		}
@@ -272,7 +286,7 @@ func (s *Server) historyPath() string {
 
 func (s *Server) loadHistory() {
 	p := s.historyPath()
-	if p == "" {
+	if p == "" || s.opt.History.Persistent() {
 		return
 	}
 	b, err := os.ReadFile(p)
@@ -287,7 +301,7 @@ func (s *Server) loadHistory() {
 
 func (s *Server) saveHistory() {
 	p := s.historyPath()
-	if p == "" {
+	if p == "" || s.opt.History.Persistent() {
 		return
 	}
 	b, err := json.Marshal(s.opt.History.Snapshot())
@@ -673,7 +687,7 @@ func (s *Server) handleAIInsights(w http.ResponseWriter, _ *http.Request) {
 	if fc == nil {
 		fc = []ai.Forecast{}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"anomalies": an, "forecasts": fc})
+	writeJSON(w, http.StatusOK, map[string]any{"anomalies": an, "forecasts": fc, "analytics": snap.Analytics})
 }
 
 func (s *Server) handleAIAsk(w http.ResponseWriter, r *http.Request) {
