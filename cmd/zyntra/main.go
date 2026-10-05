@@ -44,6 +44,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/graph"
 	"github.com/zyvorai/zyntra/internal/inputs"
 	"github.com/zyvorai/zyntra/internal/keep"
+	"github.com/zyvorai/zyntra/internal/knowledge"
 	"github.com/zyvorai/zyntra/internal/notify"
 	"github.com/zyvorai/zyntra/internal/pack"
 	"github.com/zyvorai/zyntra/internal/planner"
@@ -464,10 +465,17 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 	if err != nil {
 		return nil, nil, err
 	}
+
+	docs, err := knowledge.Open(filepath.Join(stateDir, "knowledge.sqlite"))
+	if err != nil {
+		history.Close()
+		return nil, nil, fmt.Errorf("knowledge: %w", err)
+	}
 	opts := api.Options{
-		Ontology: ont,
-		Rollouts: rollouts,
-		Model:    m, Refresh: refresh, Interval: interval, Static: web.FS(),
+		Knowledge: docs,
+		Ontology:  ont,
+		Rollouts:  rollouts,
+		Model:     m, Refresh: refresh, Interval: interval, Static: web.FS(),
 		Auth:    authn,
 		Packs:   packs,
 		Policy:  pol,

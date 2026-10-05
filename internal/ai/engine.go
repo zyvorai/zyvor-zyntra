@@ -14,6 +14,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/adapters"
 	"github.com/zyvorai/zyntra/internal/gaps"
 	"github.com/zyvorai/zyntra/internal/graph"
+	"github.com/zyvorai/zyntra/internal/knowledge"
 	"github.com/zyvorai/zyntra/internal/planner"
 	"github.com/zyvorai/zyntra/internal/sim"
 )
@@ -94,9 +95,10 @@ type Engine struct {
 }
 
 type Answer struct {
-	Text      string   `json:"text"`
-	Intent    string   `json:"intent"`
-	Grounding []string `json:"grounding"`
+	DocumentCitations []knowledge.Citation `json:"document_citations,omitempty"`
+	Text              string               `json:"text"`
+	Intent            string               `json:"intent"`
+	Grounding         []string             `json:"grounding"`
 	// Citations name the object properties an answer about business
 	// objects rests on.
 	Citations []Citation `json:"citations,omitempty"`

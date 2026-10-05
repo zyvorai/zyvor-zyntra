@@ -176,6 +176,7 @@ export interface Forecast {
   text: string;
 }
 export interface Answer {
+ document_citations?: DocumentCitation[];
   text: string;
   intent: string;
   grounding: string[] | null;
@@ -713,4 +714,13 @@ export interface AnalyticsReport {
   backtests: {method: string; samples: number; mae: number; rmse: number; baseline_mae: number; error_radius: number}[];
   projections: {at: string; hours: number; value: number; low: number; high: number; breach: boolean}[];
  }[];
+}
+
+export interface KnowledgeDocument {
+ id: string; title: string; source: string; text?: string; visibility: 'provider' | 'shared' | 'tenant'; tenant?: string;
+ roles: string[]; version: number; sha256: string; updated_at: string; updated_by: string;
+}
+export interface DocumentCitation {
+ document: string; title: string; source: string; version: number; sha256: string;
+ start_line: number; end_line: number; excerpt: string; score: number;
 }
