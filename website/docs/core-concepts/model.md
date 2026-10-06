@@ -14,7 +14,7 @@ sidebar_position: 1
 
 ## The model
 
-A model file ([examples/kpis.yaml](https://github.com/zyvorai/zyntra/blob/main/examples/kpis.yaml)) has three parts:
+A model file ([examples/kpis.yaml](https://github.com/zyvorai/zyvor-zyntra/blob/main/examples/kpis.yaml)) has three parts:
 
 ```yaml
 kpis:
@@ -158,11 +158,11 @@ zyntra gaps -f examples/prometheus-kpis.yaml -prometheus http://prometheus:9090 
   source: {kind: fabric, path: /api/v1/system/info, field: "filesystems.#(mountpoint=/).usage_percent"}
 ```
 
-Fields support `a.b.0`, `list.#` (count), `list.#(k=v)` (count matches), `list.#(k=v).f` (field of the first match) and `list.*.f`, plus `scale`, `agg: sum|avg|max|min` and `rate`. See [packs/gpu](https://github.com/zyvorai/zyntra/blob/main/packs/gpu) for a full lab model (20 KPIs) that uses every v0.3 field.
+Fields support `a.b.0`, `list.#` (count), `list.#(k=v)` (count matches), `list.#(k=v).f` (field of the first match) and `list.*.f`, plus `scale`, `agg: sum|avg|max|min` and `rate`. See [packs/gpu](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/gpu) for a full lab model (20 KPIs) that uses every v0.3 field.
 
 ## Packs (any industry)
 
-The engine knows nothing about GPUs or shops. A **pack** is a directory of files: `pack.yaml` (id, owners, timezone, calendars), `kpis.yaml`, `sources.example.yaml`, a README and a `fixture/` of sample exports. [packs/shop](https://github.com/zyvorai/zyntra/blob/main/packs/shop) runs a shop from CSV exports with no Kubernetes in the loop:
+The engine knows nothing about GPUs or shops. A **pack** is a directory of files: `pack.yaml` (id, owners, timezone, calendars), `kpis.yaml`, `sources.example.yaml`, a README and a `fixture/` of sample exports. [packs/shop](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/shop) runs a shop from CSV exports with no Kubernetes in the loop:
 
 ```bash
 zyntra pack list
@@ -200,4 +200,4 @@ Every source reports `ok`, `stale`, `error` or `fallback`. Only `${ZYNTRA_*}` va
 
 After an apply, the decision record compares predicted and actual per KPI and marks each a hit or a miss. Every audit event for an action also carries `payload_sha256` (what was approved and sent) and, after a webhook, `response_sha256`; both are inside the hash chain, so `GET /api/v1/audit/verify` fails if either is altered.
 
-**Test inbox.** `examples/receiver` (built as `bin/zyntra-receiver`) accepts webhook deliveries, stores one JSON file per delivery, answers a repeated `Idempotency-Key` with `200 {"duplicate":true}` instead of recording it twice, and redacts `Authorization`, `Cookie` and `X-Api-Key`. Point a pack's URLs at it during a pilot (`make run-shop` does) and open `http://127.0.0.1:9099` to see what landed. Shipped packs: [shop](https://github.com/zyvorai/zyntra/blob/main/packs/shop), [gpu](https://github.com/zyvorai/zyntra/blob/main/packs/gpu) (the lab model), [manufacturing](https://github.com/zyvorai/zyntra/blob/main/packs/manufacturing), [logistics](https://github.com/zyvorai/zyntra/blob/main/packs/logistics), [payments](https://github.com/zyvorai/zyntra/blob/main/packs/payments) and [imaging-ops](https://github.com/zyvorai/zyntra/blob/main/packs/imaging-ops) (capacity and flow only: no patient data, no clinical decisions). The newer ones are starting points: their weights are declared, not measured. See [docs/PRODUCT_PLAN.md](https://github.com/zyvorai/zyntra/blob/main/docs/PRODUCT_PLAN.md) for the pack catalog and build order.
+**Test inbox.** `examples/receiver` (built as `bin/zyntra-receiver`) accepts webhook deliveries, stores one JSON file per delivery, answers a repeated `Idempotency-Key` with `200 {"duplicate":true}` instead of recording it twice, and redacts `Authorization`, `Cookie` and `X-Api-Key`. Point a pack's URLs at it during a pilot (`make run-shop` does) and open `http://127.0.0.1:9099` to see what landed. Shipped packs: [shop](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/shop), [gpu](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/gpu) (the lab model), [manufacturing](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/manufacturing), [logistics](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/logistics), [payments](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/payments) and [imaging-ops](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/imaging-ops) (capacity and flow only: no patient data, no clinical decisions). The newer ones are starting points: their weights are declared, not measured. See [docs/PRODUCT_PLAN.md](https://github.com/zyvorai/zyvor-zyntra/blob/main/docs/PRODUCT_PLAN.md) for the pack catalog and build order.

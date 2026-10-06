@@ -4,17 +4,17 @@
 
 # Zyntra
 
-[![CI](https://github.com/zyvorai/zyntra/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyntra/actions/workflows/ci.yml)
+[![CI](https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml)
 [![License: Zyvor Production v1.0](https://img.shields.io/badge/License-Zyvor%20Production%20v1.0-ff5a15.svg)](LICENSE)
-[![Version](https://img.shields.io/github/v/release/zyvorai/zyntra?label=version&color=111111)](https://github.com/zyvorai/zyntra/releases)
+[![Version](https://img.shields.io/github/v/release/zyvorai/zyvor-zyntra?label=version&color=111111)](https://github.com/zyvorai/zyvor-zyntra/releases)
 [![Go](https://img.shields.io/badge/Go-one%20binary-00ADD8?logo=go&logoColor=white)](go.mod)
-[![Docs](https://img.shields.io/badge/docs-zyvorai.github.io%2Fzyntra-0071e3)](https://zyvorai.github.io/zyntra/)
+[![Docs](https://img.shields.io/badge/docs-zyvorai.github.io%2Fzyvor--zyntra-0071e3)](https://zyvorai.github.io/zyvor-zyntra/)
 
 [![Book a demo](https://img.shields.io/badge/Book_a_demo-ff5a15?style=for-the-badge)](https://zyvor.dev/schedule?utm_source=github&utm_medium=zyntra&utm_campaign=readme_hero)
 [![30-day PoC](https://img.shields.io/badge/30--day_PoC-111111?style=for-the-badge)](https://zyvor.dev/poc?utm_source=github&utm_medium=zyntra&utm_campaign=readme_hero)
 [![Quickstart](https://img.shields.io/badge/Quickstart_from_a_CSV-ff6b35?style=for-the-badge)](#quickstart)
 
-**[Docs site](https://zyvorai.github.io/zyntra/)** · [Quickstart](#quickstart) · [Reference](docs/REFERENCE.md) · [Product tour](https://zyvorai.github.io/zyntra/gallery) · [zyvor.dev](https://zyvor.dev/zyntra?utm_source=github&utm_medium=zyntra&utm_campaign=readme_hero)
+**[Docs site](https://zyvorai.github.io/zyvor-zyntra/)** · [Quickstart](#quickstart) · [Reference](docs/REFERENCE.md) · [Product tour](https://zyvorai.github.io/zyvor-zyntra/gallery) · [zyvor.dev](https://zyvor.dev/zyntra?utm_source=github&utm_medium=zyntra&utm_campaign=readme_hero)
 
 <img src="docs/social/zyntra-hero-dark.jpg" alt="Zyntra: know the next best action, and why. Signals, KPI graph, what-if, ranked plan, human approval, verified outcome." width="100%">
 
@@ -128,7 +128,7 @@ Dashboards are the right tool for visualising and alerting across many sources. 
 ## Quickstart
 
 ```bash
-git clone https://github.com/zyvorai/zyntra.git && cd zyntra
+git clone https://github.com/zyvorai/zyvor-zyntra.git && cd zyntra
 make build                                          # console (web/, Node 22) and the Go binary
 ./bin/zyntra plan -f packs/shop                     # a ranked plan from CSV fixtures, no cluster needed
 ZYNTRA_API_KEY=dev ./bin/zyntra serve -f packs/shop # console and API on :8080
@@ -227,7 +227,7 @@ Zyntra is the decision layer of the Zyvor suite. Outside Zyvor it needs nothing 
 
 Zyntra is source-available under the **[Zyvor Production License v1.0](LICENSE)**. Every capability is in every edition and free for development, testing, evaluation, research, education and non-production labs. Production use (customer workloads, SaaS, managed services, OEM, redistribution) needs a commercial license, priced by managed clusters and KPI graphs, with unlimited users and approvers: [pricing detail](docs/sales/enterprise-pricing.md) · [Pricing](https://zyvor.dev/pricing?utm_source=github&utm_medium=zyntra&utm_campaign=readme_license) · [sales@zyvor.dev](mailto:sales@zyvor.dev).
 
-**Security:** report vulnerabilities privately per [SECURITY.md](SECURITY.md). **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md). Released versions are on the [releases page](https://github.com/zyvorai/zyntra/releases); anything newer on `main` is unreleased.
+**Security:** report vulnerabilities privately per [SECURITY.md](SECURITY.md). **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md). Released versions are on the [releases page](https://github.com/zyvorai/zyvor-zyntra/releases); anything newer on `main` is unreleased.
 
 ---
 
@@ -239,6 +239,6 @@ Zyntra is source-available under the **[Zyvor Production License v1.0](LICENSE)*
 [![30-day PoC](https://img.shields.io/badge/Start_a_30--day_PoC-000000?style=for-the-badge)](https://zyvor.dev/poc?utm_source=github&utm_medium=zyntra&utm_campaign=readme_footer)
 [![Pricing](https://img.shields.io/badge/Pricing-1d1d1f?style=for-the-badge)](https://zyvor.dev/pricing?utm_source=github&utm_medium=zyntra&utm_campaign=readme_footer)
 [![Contact sales](https://img.shields.io/badge/Contact_sales-2997ff?style=for-the-badge)](mailto:sales@zyvor.dev?subject=Zyntra)
-[![Star on GitHub](https://img.shields.io/github/stars/zyvorai/zyntra?style=for-the-badge&logo=github&label=Star&color=2997ff)](https://github.com/zyvorai/zyntra)
+[![Star on GitHub](https://img.shields.io/github/stars/zyvorai/zyvor-zyntra?style=for-the-badge&logo=github&label=Star&color=2997ff)](https://github.com/zyvorai/zyvor-zyntra)
 
 </div>

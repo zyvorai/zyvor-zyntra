@@ -10,7 +10,7 @@ Zyntra is one Go binary with an embedded console. Building from source needs **G
 ## A ranked plan from a CSV
 
 ```bash
-git clone https://github.com/zyvorai/zyntra.git && cd zyntra
+git clone https://github.com/zyvorai/zyvor-zyntra.git && cd zyntra
 make build                                          # console (web/, Node 22) and the Go binary
 ./bin/zyntra plan -f packs/shop                     # a ranked plan from CSV fixtures, no cluster needed
 ```

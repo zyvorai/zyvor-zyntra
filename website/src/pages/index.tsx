@@ -271,7 +271,7 @@ function Quickstart() {
           </div>
           <div>
             <CodeBlock language="bash">
-              {`git clone https://github.com/zyvorai/zyntra.git && cd zyntra
+              {`git clone https://github.com/zyvorai/zyvor-zyntra.git && cd zyntra
 make build
 ./bin/zyntra plan -f packs/shop      # ranked plan from CSV fixtures
 ZYNTRA_API_KEY=dev ./bin/zyntra serve -f packs/shop   # console on :8080
@@ -305,7 +305,7 @@ function TrustBand() {
             <Link to="/docs/security">Read the security model →</Link>
           </div>
           <div className={styles.trustBadges}>
-            <img src="https://github.com/zyvorai/zyntra/actions/workflows/ci.yml/badge.svg" alt="CI status" />
+            <img src="https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml/badge.svg" alt="CI status" />
             <img
               src="https://img.shields.io/badge/License-Zyvor%20Production%20v1.0-ff5a15.svg"
               alt="Zyvor Production License v1.0"
@@ -339,7 +339,7 @@ function FinalCTA() {
             <Link className="button button--outline button--primary button--lg" to={POC}>
               Start a 30-day PoC
             </Link>
-            <Link className="button button--outline button--primary button--lg" to="https://github.com/zyvorai/zyntra">
+            <Link className="button button--outline button--primary button--lg" to="https://github.com/zyvorai/zyvor-zyntra">
               Star on GitHub
             </Link>
           </div>

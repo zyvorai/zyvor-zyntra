@@ -16,7 +16,7 @@ Every transition is appended to a hash-chained audit log (`GET /api/v1/audit/ver
 
 ## Policy
 
-`zyntra serve -policy policy.yaml` (or `ZYNTRA_POLICY`) sets approval rules; see [examples/policy.yaml](https://github.com/zyvorai/zyntra/blob/main/examples/policy.yaml). Without a file, one approval is enough, as in v0.2.
+`zyntra serve -policy policy.yaml` (or `ZYNTRA_POLICY`) sets approval rules; see [examples/policy.yaml](https://github.com/zyvorai/zyvor-zyntra/blob/main/examples/policy.yaml). Without a file, one approval is enough, as in v0.2.
 
 ```yaml
 maintenanceWindows:

@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://zyvorai.github.io',
-  baseUrl: '/zyntra/',
+  baseUrl: '/zyvor-zyntra/',
 
   organizationName: 'zyvorai',
-  projectName: 'zyntra',
+  projectName: 'zyvor-zyntra',
 
   onBrokenLinks: 'throw',
 
@@ -38,7 +38,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/zyvorai/zyntra/tree/main/website/',
+          editUrl: 'https://github.com/zyvorai/zyvor-zyntra/tree/main/website/',
         },
         blog: false,
         theme: {
@@ -78,7 +78,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/zyvorai/zyntra',
+          href: 'https://github.com/zyvorai/zyvor-zyntra',
           label: 'GitHub',
           position: 'right',
         },
@@ -105,12 +105,12 @@ const config: Config = {
         {
           title: 'Project',
           items: [
-            {label: 'GitHub', href: 'https://github.com/zyvorai/zyntra'},
-            {label: 'Releases', href: 'https://github.com/zyvorai/zyntra/releases'},
-            {label: 'Contributing', href: 'https://github.com/zyvorai/zyntra/blob/main/CONTRIBUTING.md'},
+            {label: 'GitHub', href: 'https://github.com/zyvorai/zyvor-zyntra'},
+            {label: 'Releases', href: 'https://github.com/zyvorai/zyvor-zyntra/releases'},
+            {label: 'Contributing', href: 'https://github.com/zyvorai/zyvor-zyntra/blob/main/CONTRIBUTING.md'},
             {
               label: 'License (Zyvor Production v1.0)',
-              href: 'https://github.com/zyvorai/zyntra/blob/main/LICENSE',
+              href: 'https://github.com/zyvorai/zyvor-zyntra/blob/main/LICENSE',
             },
           ],
         },
