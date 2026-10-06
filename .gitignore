@@ -5,3 +5,6 @@ coverage.out
 .deploy-last
 __pycache__/
 *.pyc
+website/node_modules/
+website/build/
+website/.docusaurus/

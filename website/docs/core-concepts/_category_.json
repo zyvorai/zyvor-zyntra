@@ -1,0 +1,8 @@
+{
+  "label": "Core Concepts",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "The KPI model and packs, the approval loop, the business ontology, watches, investigations, analytics and document knowledge."
+  }
+}

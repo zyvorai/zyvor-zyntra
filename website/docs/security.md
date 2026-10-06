@@ -1,0 +1,32 @@
+---
+sidebar_position: 4
+---
+
+# Security
+
+Zyntra reads infrastructure metrics, cluster inventory and, through packs, business exports and APIs. With approval it changes Gravia scheduling objects, sends webhooks or writes files. KPI models, decision records and snapshots describe the capacity, cost and weak points of your environment, so treat them as confidential infrastructure data.
+
+## Safe deployment defaults
+
+- **Nothing runs without approval.** Every proposal needs at least one human approval. Execution is `kubectl --dry-run=server` unless `ZYNTRA_EXECUTE=apply` is set.
+- **Change the default password.** When the policy file defines no users, Zyntra creates a local admin account `admin` with password `Admin@321`, so the console is never open by accident. That password is public. Zyntra logs a warning at start, and the console shows a banner to that account until you set `ZYNTRA_ADMIN_PASSWORD` (Helm: `auth.adminPassword`), or define users in the policy file, which removes the built-in account. Do this before exposing the console. `ZYNTRA_DEFAULT_ADMIN=off` removes the account; with no key, OIDC or users the API is then open, which is for development only.
+- **Configure sign-in.**
+  - Prefer OIDC (`ZYNTRA_OIDC_*`). It uses the authorization code flow with PKCE, a nonce, and a signed, short-lived state cookie. Map groups to the narrowest role that works (`viewer`, `proposer`, `approver`, `executor`, `admin`).
+  - The access key signs in as `admin`. Keep it as break-glass access, store it like a root credential and rotate it. Set `ZYNTRA_SESSION_SECRET` so rotating the key does not invalidate sessions, and so sessions survive restarts when you run without a key.
+  - Local accounts in the policy file store bcrypt hashes only (`zyntra hash-password`). Unknown users take as long to reject as wrong passwords.
+- **Sessions** are HMAC-signed HttpOnly cookies carrying the subject, roles and expiry (12 h, or 7 days with "remember me"). They are `SameSite=Lax` so the OIDC redirect can complete; every state-changing route is a JSON `POST`, which browsers do not send cross-site with Lax cookies. Cookies are marked `Secure` behind TLS (directly or via `X-Forwarded-Proto: https`).
+- **Separation of duties.** Use the policy file to require several approvers for risky actions (`approvals: 2`, `distinctFromProposer: true`), maintenance windows, fresh inputs, and `keep: required` so changes never bypass Fabric Keep.
+- **Re-checks before execution.** An approved proposal is re-simulated on fresh data right before it runs. Stale required inputs, constraint breaches, drift past `maxDrift`, a changed model, an expired approval or a closed maintenance window block it, and the reason is recorded.
+- **Tamper evidence.** The audit log in `$ZYNTRA_STATE_DIR/approvals.json` is hash-chained; `GET /api/v1/audit/verify` reports the first altered or missing entry. Exports are signed with an Ed25519 key in `$ZYNTRA_STATE_DIR/decision-signing.key` (0600). Back up the state directory and protect it with file permissions; the chain detects edits but does not prevent someone with write access from deleting the whole file.
+- **Least privilege for adapters and execution.** Give the Prometheus and Kubernetes adapters read-only credentials; the Kubernetes adapter only runs `kubectl get nodes`. The execution kubeconfig needs only the Gravia CRDs Zyntra manages (`gryviapriorities`, `gryviagpusharingpolicies`, and `patch` on `gryviaaijobs`). Rollbacks delete only objects labelled `app.kubernetes.io/managed-by=zyntra`.
+- **Packs are code-adjacent.** A pack decides which URLs Zyntra calls and which files it writes, so review packs like configuration with production access. Only `${ZYNTRA_*}` variables are expanded in source and webhook URLs and headers, Zyntra's own credentials (`ZYNTRA_API_KEY`, `ZYNTRA_SESSION_SECRET`, exec, ingest, Keep, OIDC and AI secrets) never are, and rendered proposals show the `${...}` reference rather than its value. Error messages omit URLs so tokens in query strings do not leak.
+- **Webhook and file actions.** Webhooks are sent only on apply, with an `Idempotency-Key` equal to the proposal id; the status code and a sha256 of the response are recorded. File actions write only inside `ZYNTRA_OUTPUT_DIR` (default `$ZYNTRA_STATE_DIR/out`), refuse absolute paths and `..`, and never overwrite an existing file.
+- **Ingest token.** `ZYNTRA_INGEST_TOKEN` can only POST to `/api/v1/ingest/<channel>` for channels a KPI reads. Give each gateway this token, never the access key. Manual KPI values need the proposer role and are written to the audit chain.
+- Terminate TLS at a trusted ingress or reverse proxy. The Keep exec listener uses its own loopback TLS certificate and a separate exec token that can only call the execution endpoint.
+- **Containers and Kubernetes.** The image is distroless and runs as uid 65532 with state only in `/var/lib/zyntra`, so run it with a read-only root filesystem, all capabilities dropped and `no-new-privileges` (the compose file and Helm chart do). The chart does not mount a service account token, runs one replica so the audit chain has a single writer, and keeps the credentials Secret and the state PVC on uninstall. The Secret is generated once by Helm; for GitOps, create it yourself and set `auth.existingSecret`. Enable `networkPolicy` to limit who can reach the console. The test receiver (`receiver.enabled`, `zyntra-receiver`) is for pilots and has no authentication; do not expose it.
+- **Model boundaries.** `ZYNTRA_AI_BASE_URL` is never set by default and Zyntra never picks a cloud endpoint, so nothing leaves the network unless you configure it. When set, the model receives KPI names, values, gaps, sample column names and sample rows (for pack drafts and payload fills). It cannot pick, rank, approve or run an action: it rewrites text, drafts pack YAML that is validated and never loaded automatically, chooses a fill column from a validated list, and reads README rules whose line and action must exist. Payload values always come from the source rows frozen on the proposal.
+- The server limits request bodies to 1 MiB (4 MiB for pack-draft samples).
+
+## Reporting vulnerabilities
+
+Please report suspected vulnerabilities privately to the project maintainers rather than opening a public issue with exploit details.
