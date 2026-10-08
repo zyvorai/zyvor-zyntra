@@ -16,6 +16,7 @@ import Insights from './pages/Insights';
 import Ask from './pages/Ask';
 import ModelPage from './pages/ModelPage';
 import Decision from './pages/Decision';
+import Executive from './pages/Executive';
 import Objects from './pages/Objects';
 import Workflows from './pages/Workflows';
 import Scenarios from './pages/Scenarios';
@@ -93,6 +94,7 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
           {page === 'scenarios' && <Scenarios />}
           {page === 'servicelevels' && <ServiceLevels />}
           {page === 'decision' && <Decision />}
+          {page === 'executive' && <Executive />}
         </ErrorBoundary>
       </main>
       <footer className="app-footer">

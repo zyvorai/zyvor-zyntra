@@ -13,7 +13,8 @@ export type Page =
   | 'workflows'
   | 'scenarios'
   | 'servicelevels'
-  | 'decision';
+  | 'decision'
+  | 'executive';
 
 export interface NavChild { page: Page; label: string; blurb: string; tenantOnly?: boolean }
 export interface NavGroup { label: string; page?: Page; children?: NavChild[]; ontology?: boolean }
@@ -23,6 +24,7 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Decide',
     children: [
+      { page: 'executive', label: 'Executive', blurb: 'Decision inbox, briefs, conflicts and 30/60/90 reviews.' },
       { page: 'gaps', label: 'Gaps', blurb: 'KPIs off target, ranked by relative shortfall.' },
       { page: 'plan', label: 'Plan', blurb: 'Actions ranked by improvement minus risk.' },
       { page: 'simulate', label: 'Simulate', blurb: 'What-if propagation through the KPI graph.' },
@@ -72,6 +74,7 @@ export const pageTitles: Record<Page, string> = {
   scenarios: 'Scenarios',
   servicelevels: 'Service levels',
   decision: 'Decision',
+  executive: 'Executive',
 };
 
 export function pageFromHash(): Page {
