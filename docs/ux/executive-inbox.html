@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Zyntra Executive: decision inbox</title>
+<!-- Executive card, 1600px wide at 2x. Numbers come from packs/leadership. Build: ./docs/ux/build-readme-cards.sh -->
+<style>
+  :root { --acc:#ff6b35; --blue:#2997ff; --ok:#30d158; --bad:#ff453a; --sans:'SF Pro Display','Helvetica Neue',Helvetica,Arial,sans-serif; --mono:'SF Mono',Menlo,Consolas,monospace; }
+  * { box-sizing:border-box; } html,body { margin:0; padding:0; }
+  body { width:1600px; background:#000; color:#f5f5f7; font-family:var(--sans); position:relative; overflow:hidden; }
+  .glow { position:absolute; inset:0; background:radial-gradient(800px 420px at 92% -10%, rgba(255,107,53,.30), transparent 65%), radial-gradient(700px 380px at -5% 115%, rgba(0,113,227,.22), transparent 60%); }
+  .rail { position:absolute; left:0; top:0; bottom:0; width:6px; background:linear-gradient(180deg,var(--acc),rgba(41,151,255,.2)); }
+  .wrap { position:relative; padding:44px 64px 40px; }
+  .top { display:flex; justify-content:space-between; font-family:var(--mono); font-size:15px; letter-spacing:.18em; text-transform:uppercase; color:#a1a1a6; }
+  .top b { color:#fff; } .top span:last-child { color:var(--acc); }
+  h1 { margin:18px 0 6px; font-size:54px; line-height:1.05; font-weight:800; letter-spacing:-.03em; }
+  h1 em { font-style:normal; color:var(--acc); }
+  .sub { font-size:22px; color:#a1a1a6; max-width:1200px; line-height:1.4; margin-bottom:28px; }
+  .card { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:22px 26px; }
+  .mono { font-family:var(--mono); } .dim { color:#a1a1a6; }
+  .pill { display:inline-block; font-family:var(--mono); font-size:13px; letter-spacing:.08em; text-transform:uppercase; padding:4px 10px; border-radius:99px; border:1px solid rgba(255,255,255,.25); color:#d2d2d7; }
+  .pill.ok { color:var(--ok); border-color:rgba(48,209,88,.5); } .pill.bad { color:var(--bad); border-color:rgba(255,69,58,.5); } .pill.acc { color:var(--acc); border-color:rgba(255,107,53,.5); }
+  .foot { margin-top:26px; font-family:var(--mono); font-size:14px; color:#6e6e73; letter-spacing:.06em; }
+</style></head><body>
+<div class="glow"></div><div class="rail"></div>
+<div class="wrap" id="w"><div class="top"><span><b>Zyntra</b> Executive</span><span>Decision inbox</span></div>
+<h1>Know which decisions <em>need you</em> today.</h1>
+<div class="sub">Zyntra ranks open leadership questions by how far the KPIs behind them are off target, names an owner and a due date, and says what to do next.</div>
+<style>
+ .row { display:grid; grid-template-columns:70px 1fr 220px; gap:24px; align-items:center; margin-bottom:16px; }
+ .rank { font-size:48px; font-weight:800; color:var(--acc); }
+ .q { font-size:28px; font-weight:700; letter-spacing:-.01em; } .why { font-size:19px; color:#a1a1a6; margin-top:8px; line-height:1.4; }
+ .ev { margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; } .meta { text-align:right; line-height:1.9; }
+ .next { margin-top:14px; font-size:18px; color:#d2d2d7; } .next b { color:var(--blue); }
+</style>
+<div class="card row"><div class="rank">1</div><div><div class="q">Should we spend ₹20 lakh on marketing or hire two engineers?</div>
+<div class="why">Leads are up and win rate is down. Onboarding capacity is already below target, so a demand buy can outrun delivery.</div>
+<div class="ev"><span class="pill">revenue_at_risk</span><span class="pill">open_commitments</span><span class="pill">experiment_learning</span><span class="pill">engineering_free</span><span class="pill">onboarding_capacity</span><span class="pill">cac</span></div>
+<div class="next"><b>Next:</b> compare the options, including do nothing, then approve or reject.</div></div>
+<div class="meta"><span class="pill acc">owner ceo</span><br><span class="pill">due 2026-10-15</span><br><span class="mono dim">severity 6.64</span></div></div>
+<div class="card row"><div class="rank">2</div><div><div class="q">Which roadmap items should come first?</div>
+<div class="why">Open commitments and delivery days are off target. Capacity is the constraint, not the backlog list.</div>
+<div class="ev"><span class="pill">revenue_at_risk</span><span class="pill">open_commitments</span><span class="pill">engineering_free</span><span class="pill">delivery_days</span><span class="pill">onboarding_capacity</span></div>
+<div class="next"><b>Next:</b> compare the options, including do nothing, then approve or reject.</div></div>
+<div class="meta"><span class="pill acc">owner cto</span><br><span class="pill">due 2026-10-12</span><br><span class="mono dim">severity 5.59</span></div></div>
+<div class="foot">ZYNTRA EXECUTIVE · packs/leadership · simulator ranks, humans approve</div></div>
+<script>document.body.setAttribute('data-h', Math.ceil(document.getElementById('w').getBoundingClientRect().height));</script>
+</body></html>

@@ -20,3 +20,11 @@ The leadership pack (`packs/leadership`) is the first release: a B2B weekly revi
 `executive.yaml` next to the pack names the questions and the assumptions. The server loads it from the pack directory (`-f packs/leadership`). Without that file the inbox is still built from gaps and the plan.
 
 Approval stays closed when a required input is stale. Forecast accuracy comes from the existing outcome record, not from a model.
+
+## Overview cards
+
+![Decision inbox](ux/executive-inbox.jpg)
+![Compare scenarios](ux/executive-options.jpg)
+![Conflicts and follow-up](ux/executive-conflicts.jpg)
+
+Figures come from `packs/leadership`. Regenerate with `./docs/ux/build-readme-cards.sh`.
