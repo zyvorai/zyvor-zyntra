@@ -1,0 +1,39 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Leadership overlay. The simulator still ranks. This file only names the
+# decision, who it is for, and which assumptions a reviewer can turn off.
+decisions:
+  - id: spend-or-hire
+    question: Should we spend ₹20 lakh on marketing or hire two engineers?
+    audience: [ceo, cto, marketing]
+    owner: ceo
+    due: 2026-10-15
+    options: [spend_20l_marketing, hire_two_engineers, stage_one_hire, postpone_30d, do_nothing]
+    experiment: experiment_landing
+    why: Leads are up and win rate is down. Onboarding capacity is already below target, so a demand buy can outrun delivery.
+
+  - id: roadmap-order
+    question: Which roadmap items should come first?
+    audience: [cto, ceo]
+    owner: cto
+    due: 2026-10-12
+    options: [hire_two_engineers, stage_one_hire, postpone_30d, do_nothing]
+    why: Open commitments and delivery days are off target. Capacity is the constraint, not the backlog list.
+
+assumptions:
+  - id: capacity_binds
+    statement: Engineering capacity limits new customer onboarding.
+    from: qualified_pipeline
+    to: onboarding_capacity
+    scale: 0
+  - id: leads_convert
+    statement: Extra leads become qualified pipeline at the modelled rate.
+    from: lead_volume
+    to: qualified_pipeline
+    scale: 0
+  - id: delivery_loses_deals
+    statement: A longer delivery cycle reduces win rate.
+    from: delivery_days
+    to: win_rate
+    scale: 0

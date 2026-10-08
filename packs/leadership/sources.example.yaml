@@ -1,0 +1,15 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Bind these exports before a pilot. The sample week in kpis.yaml runs
+# without them. Dry-run never needs a webhook.
+variables: []
+files:
+  - path: fixture/pipeline.csv
+    description: "CRM export: opportunity, stage, amount_inr, owner"
+  - path: fixture/campaigns.csv
+    description: "Campaign export: campaign, spend_inr, leads, qualified"
+  - path: fixture/staffing.csv
+    description: "Staffing export: team, free_engineers, open_roles, commitments"
+  - path: fixture/budget.csv
+    description: "Accounting export: account, remaining_inr"

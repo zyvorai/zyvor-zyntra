@@ -242,3 +242,8 @@ Zyntra is source-available under the **[Zyvor Production License v1.0](LICENSE)*
 [![Star on GitHub](https://img.shields.io/github/stars/zyvorai/zyvor-zyntra?style=for-the-badge&logo=github&label=Star&color=2997ff)](https://github.com/zyvorai/zyvor-zyntra)
 
 </div>
+
+## Executive
+
+Zyntra Executive is the leadership view of the same loop: a decision inbox, an evidence-backed brief, scenario comparison that includes postpone and do nothing, cross-department conflicts, and a 30/60/90 review of recorded outcomes. The simulator still ranks. See [docs/EXECUTIVE.md](docs/EXECUTIVE.md) and `packs/leadership`.
+

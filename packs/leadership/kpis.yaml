@@ -1,0 +1,281 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Weekly leadership review for a B2B company. Values are a sample week so the
+# brief is runnable without a CRM export. Point file sources at your own
+# exports when you are ready (see sources.example.yaml). Weights are starting
+# points, not truth.
+name: leadership-review
+
+kpis:
+  - id: qualified_pipeline
+    name: Qualified pipeline
+    currency: INR
+    owner: sales
+    value: 5200000
+    target: 8000000
+    direction: higher
+    criticality: high
+    min: 0
+
+  - id: lead_volume
+    name: Inbound leads this week
+    unit: leads
+    unitClass: count
+    owner: marketing
+    value: 140
+    target: 80
+    direction: higher
+    criticality: normal
+    min: 0
+
+  - id: win_rate
+    name: Win rate
+    unitClass: ratio
+    owner: sales
+    value: 0.11
+    target: 0.22
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+
+  - id: cac
+    name: Customer acquisition cost
+    currency: INR
+    owner: marketing
+    value: 62000
+    target: 45000
+    direction: lower
+    criticality: normal
+    min: 0
+
+  - id: marketing_budget
+    name: Marketing budget remaining
+    currency: INR
+    owner: marketing
+    value: 2400000
+    target: 2000000
+    direction: higher
+    criticality: normal
+    min: 0
+
+  - id: engineering_free
+    name: Free engineering capacity
+    unit: engineers
+    unitClass: count
+    owner: cto
+    value: 1.5
+    target: 4
+    direction: higher
+    criticality: critical
+    min: 0
+
+  - id: onboarding_capacity
+    name: Customers we can onboard this month
+    unit: customers
+    unitClass: count
+    owner: cto
+    value: 6
+    target: 12
+    direction: higher
+    criticality: critical
+    min: 0
+
+  - id: open_commitments
+    name: Open customer commitments
+    unit: commitments
+    unitClass: count
+    owner: cto
+    value: 9
+    target: 4
+    direction: lower
+    criticality: high
+    min: 0
+
+  - id: delivery_days
+    name: Delivery cycle
+    unit: days
+    unitClass: duration
+    owner: cto
+    value: 34
+    target: 21
+    direction: lower
+    criticality: high
+    min: 0
+
+  - id: revenue_at_risk
+    name: Revenue exposed to delivery slip
+    currency: INR
+    owner: ceo
+    value: 1800000
+    target: 500000
+    direction: lower
+    criticality: critical
+    min: 0
+
+  - id: experiment_learning
+    name: Experiment evidence score
+    unitClass: ratio
+    owner: marketing
+    value: 0.2
+    target: 0.6
+    direction: higher
+    criticality: low
+    min: 0
+    max: 1
+
+edges:
+  - from: lead_volume
+    to: qualified_pipeline
+    weight: 0.12
+    confidence: 0.35
+    why: More inbound fills the pipeline only if sales can work the leads.
+  - from: qualified_pipeline
+    to: onboarding_capacity
+    weight: -0.08
+    confidence: 0.25
+    why: New demand consumes onboarding capacity.
+  - from: engineering_free
+    to: onboarding_capacity
+    weight: 0.45
+    confidence: 0.2
+    why: Free engineers are what raise onboarding capacity.
+  - from: engineering_free
+    to: delivery_days
+    weight: -0.2
+    confidence: 0.3
+    why: More free capacity shortens the delivery cycle.
+  - from: onboarding_capacity
+    to: revenue_at_risk
+    weight: -0.25
+    confidence: 0.3
+    why: Capacity that can take the work lowers revenue exposed to slip.
+  - from: delivery_days
+    to: win_rate
+    weight: -0.15
+    confidence: 0.4
+    why: Slow delivery shows up in lost deals.
+  - from: win_rate
+    to: qualified_pipeline
+    weight: 0.1
+    confidence: 0.3
+    why: A higher win rate converts the same leads into more pipeline.
+
+actions:
+  - id: spend_20l_marketing
+    name: Spend ₹20 lakh on marketing
+    description: Move ₹20 lakh from the remaining budget into demand generation this month.
+    risk: high
+    approvers: 2
+    invariants:
+      - kpi: onboarding_capacity
+        max_worsen: 0
+        why: Engineering capacity limits new customer onboarding. Do not buy demand the team cannot take.
+    effects:
+      - kpi: lead_volume
+        change: 0.28
+        uncertainty: 0.35
+      - kpi: qualified_pipeline
+        mode: absolute
+        change: 1400000
+        uncertainty: 0.4
+        saturation: 2000000
+      - kpi: cac
+        change: -0.08
+        uncertainty: 0.3
+      - kpi: marketing_budget
+        mode: absolute
+        change: -2000000
+      - kpi: onboarding_capacity
+        mode: absolute
+        change: -2
+        uncertainty: 0.2
+
+  - id: hire_two_engineers
+    name: Hire two engineers
+    description: Open two engineering seats and hold marketing spend. Capacity moves before demand.
+    risk: medium
+    approvers: 2
+    effects:
+      - kpi: engineering_free
+        mode: absolute
+        change: 2
+        uncertainty: 0.15
+      - kpi: onboarding_capacity
+        mode: absolute
+        change: 4
+        uncertainty: 0.25
+      - kpi: delivery_days
+        change: -0.18
+        uncertainty: 0.3
+      - kpi: open_commitments
+        change: -0.1
+        uncertainty: 0.2
+      - kpi: marketing_budget
+        mode: absolute
+        change: -400000
+        uncertainty: 0.1
+
+  - id: stage_one_hire
+    name: Stage it — one hire, then ₹8 lakh
+    description: Hire one engineer, spend ₹8 lakh on a bounded campaign, and review before the rest.
+    risk: medium
+    approvers: 2
+    effects:
+      - kpi: engineering_free
+        mode: absolute
+        change: 1
+        uncertainty: 0.15
+      - kpi: onboarding_capacity
+        mode: absolute
+        change: 2
+        uncertainty: 0.25
+      - kpi: lead_volume
+        change: 0.1
+        uncertainty: 0.3
+      - kpi: qualified_pipeline
+        mode: absolute
+        change: 500000
+        uncertainty: 0.35
+        saturation: 800000
+      - kpi: marketing_budget
+        mode: absolute
+        change: -800000
+
+  - id: experiment_landing
+    name: Run a two-week landing experiment
+    description: Spend ₹2 lakh to learn why leads are up and win rate is down. Not a budget move.
+    risk: low
+    approvers: 1
+    effects:
+      - kpi: experiment_learning
+        mode: absolute
+        change: 0.35
+        uncertainty: 0.2
+      - kpi: marketing_budget
+        mode: absolute
+        change: -200000
+      - kpi: cac
+        change: -0.02
+        uncertainty: 0.4
+
+  - id: postpone_30d
+    name: Postpone 30 days
+    description: Do not spend or hire this cycle. Reopen the brief at the next monthly review.
+    risk: low
+    adapter: noop
+    effects:
+      - kpi: experiment_learning
+        change: 0.01
+        uncertainty: 0.5
+
+  - id: do_nothing
+    name: Do nothing
+    description: Leave the plan unchanged. The brief still records the choice and the assumptions.
+    risk: low
+    adapter: noop
+    effects:
+      - kpi: experiment_learning
+        change: -0.01
+        uncertainty: 0.2
