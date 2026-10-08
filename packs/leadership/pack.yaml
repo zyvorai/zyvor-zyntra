@@ -1,0 +1,11 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+id: leadership
+title: Weekly leadership review
+industry: b2b
+version: 0.1.0
+owners: [ceo, cto, marketing, sales]
+timezone: Asia/Kolkata
+calendar: review-hours
+calendars:
+  review-hours: {days: [mon, tue, wed, thu, fri], start: "09:00", end: "18:30"}

@@ -66,6 +66,7 @@ Usage:
   zyntra simulate -f kpis.yaml -action ID what-if: predicted KPI changes, why, and
                                           the dry-run payload (combine with a+b)
   zyntra plan     -f kpis.yaml [-owner O] rank actions and pairs; list blocked ones
+  zyntra executive -f packs/leadership [-audience ceo|cto|marketing|leadership] [-decision ID] print the leadership inbox and brief
   zyntra pack list [-dir packs]           packs found under a directory
   zyntra pack validate [DIR...]           check packs (default: every pack in packs/)
   zyntra pack draft -industry TEXT -sample FILE [-sample FILE] [-id ID] [-out DIR]
@@ -279,6 +280,17 @@ func run(ctx context.Context, cmd string, args []string, out io.Writer) error {
 		}
 		printSim(out, r)
 		printDryRun(out, m, acts)
+	case "executive":
+		audience := fs.String("audience", "leadership", "ceo, cto, marketing, or leadership")
+		decision := fs.String("decision", "", "brief id; default is the first inbox item")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		m, err := c.load(ctx)
+		if err != nil {
+			return err
+		}
+		return runExecutive(out, m, c.file, *audience, *decision, c.output == "json")
 	case "plan":
 		owner := fs.String("owner", "", "only actions that move KPIs with this owner")
 		if err := fs.Parse(args); err != nil {
@@ -494,6 +506,7 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		Executor: &executor.Executor{Mode: mode, Run: kubeRunner(c.kubeconfig),
 			OutDir: env("ZYNTRA_OUTPUT_DIR", filepath.Join(stateDir, "out"))},
 		StateDir: stateDir, Version: version, Host: env("ZYNTRA_HOST", hostname()),
+		PackDir: packDirOf(c.file),
 		ApprovalMode:       env("ZYNTRA_APPROVAL_MODE", api.ModeLocal),
 		KeepDoubleApproval: envBool("ZYNTRA_KEEP_DOUBLE_APPROVAL"),
 	}
@@ -1159,4 +1172,18 @@ func kubeRunner(kubeconfig string) executor.Runner {
 		return executor.KubeAPI()
 	}
 	return executor.Kubectl(kubeconfig)
+}
+
+func packDirOf(file string) string {
+	if file == "" {
+		return ""
+	}
+	fi, err := os.Stat(file)
+	if err != nil {
+		return ""
+	}
+	if fi.IsDir() {
+		return file
+	}
+	return filepath.Dir(file)
 }

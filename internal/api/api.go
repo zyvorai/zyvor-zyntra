@@ -107,6 +107,8 @@ type Options struct {
 	StateDir string
 	Version  string
 	Host     string
+	// PackDir is the pack directory, used to load executive.yaml.
+	PackDir string
 }
 
 type Server struct {
@@ -352,6 +354,12 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/graph", read(s.handleGraph))
 	mux.Handle("GET /api/v1/gaps", read(s.handleGaps))
 	mux.Handle("GET /api/v1/plan", read(s.handlePlan))
+	mux.Handle("GET /api/v1/executive/inbox", read(s.handleExecutiveInbox))
+	mux.Handle("GET /api/v1/executive/brief", read(s.handleExecutiveBrief))
+	mux.Handle("GET /api/v1/executive/conflicts", read(s.handleExecutiveConflicts))
+	mux.Handle("GET /api/v1/executive/reviews", read(s.handleExecutiveReviews))
+	mux.Handle("GET /api/v1/executive/digest", read(s.handleExecutiveDigest))
+	mux.Handle("GET /api/v1/executive/sensitivity", read(s.handleExecutiveSensitivity))
 	mux.Handle("POST /api/v1/simulate", read(s.handleSimulate))
 	mux.Handle("GET /api/v1/sources", read(s.handleSources))
 	mux.Handle("GET /api/v1/freshness", read(s.handleFreshness))
