@@ -1,0 +1,123 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Machina fleet health and Zyvor Atlas storage headroom, read from Machina's
+# one Prometheus scrape (GET /api/v1/metrics/prometheus; the Atlas gauges are
+# appended there when ATLAS_ENABLED=1). Everything runs on your own network:
+# no cloud service is read or called. Actions go to Machina's Zyra approvals
+# queue (POST /api/v1/ai/actions); a person approves there as well.
+#
+# Environment: ZYNTRA_MACHINA_URL (controller, e.g. http://10.0.0.5:5093)
+#              ZYNTRA_MACHINA_TOKEN (an operator-role Machina API key)
+name: machina-fleet
+
+kpis:
+  - id: hosts_offline
+    name: Offline hosts
+    unit: hosts
+    owner: platform
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    freshness: {maxAge: 5m}
+    source:
+      kind: http
+      url: ${ZYNTRA_MACHINA_URL}/api/v1/metrics/prometheus
+      format: prometheus
+      headers: {Authorization: "Bearer ${ZYNTRA_MACHINA_TOKEN}"}
+      metric: machina_platform_hosts_offline
+      agg: max
+
+  - id: tasks_pending
+    name: Pending controller tasks
+    unit: tasks
+    owner: platform
+    value: 0
+    target: 20
+    direction: lower
+    min: 0
+    freshness: {maxAge: 5m}
+    source:
+      kind: http
+      url: ${ZYNTRA_MACHINA_URL}/api/v1/metrics/prometheus
+      format: prometheus
+      headers: {Authorization: "Bearer ${ZYNTRA_MACHINA_TOKEN}"}
+      metric: machina_platform_tasks_pending
+      agg: max
+
+  - id: atlas_up
+    name: Atlas storage reachable
+    owner: storage
+    value: 1
+    target: 1
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    freshness: {maxAge: 5m}
+    source:
+      kind: http
+      url: ${ZYNTRA_MACHINA_URL}/api/v1/metrics/prometheus
+      format: prometheus
+      headers: {Authorization: "Bearer ${ZYNTRA_MACHINA_TOKEN}"}
+      metric: machina_atlas_up
+      agg: max
+
+  - id: atlas_days_to_full
+    name: Atlas days until full
+    unit: days
+    owner: storage
+    value: 365
+    target: 30
+    direction: higher
+    criticality: high
+    min: 0
+    freshness: {maxAge: 30m}
+    source:
+      kind: http
+      url: ${ZYNTRA_MACHINA_URL}/api/v1/metrics/prometheus
+      format: prometheus
+      headers: {Authorization: "Bearer ${ZYNTRA_MACHINA_TOKEN}"}
+      metric: machina_atlas_days_to_full
+      agg: min
+
+  - id: atlas_alerts_open
+    name: Open Atlas alerts
+    unit: alerts
+    owner: storage
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    freshness: {maxAge: 10m}
+    source:
+      kind: http
+      url: ${ZYNTRA_MACHINA_URL}/api/v1/metrics/prometheus
+      format: prometheus
+      headers: {Authorization: "Bearer ${ZYNTRA_MACHINA_TOKEN}"}
+      metric: machina_atlas_alerts_open
+      agg: max
+
+edges:
+  - {from: atlas_up, to: tasks_pending, weight: -0.2}
+  - {from: hosts_offline, to: tasks_pending, weight: 0.3}
+
+actions:
+  - id: sync_hosts
+    title: Re-sync fleet hosts
+    description: Ask Machina to re-sync host inventory and heartbeats (queued for approval in Zyra).
+    adapter: webhook
+    risk: low
+    effects:
+      - {kpi: hosts_offline, change: -0.5}
+    webhook:
+      method: POST
+      url: ${ZYNTRA_MACHINA_URL}/api/v1/ai/actions
+      headers: {Authorization: "Bearer ${ZYNTRA_MACHINA_TOKEN}"}
+      body:
+        action_type: sync_hosts
+        label: Re-sync fleet hosts (from Zyntra)
+        risk: low
+        source: zyntra

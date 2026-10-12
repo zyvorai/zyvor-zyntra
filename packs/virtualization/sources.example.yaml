@@ -1,0 +1,11 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# This pack reads one HTTP endpoint: Machina's Prometheus scrape. Atlas is read
+# through Machina (machina_atlas_* gauges), so Zyntra needs no Atlas credentials.
+variables: []
+files: []
+# Set on the Zyntra host:
+#   ZYNTRA_MACHINA_URL     Machina controller, e.g. http://10.0.0.5:5093
+#   ZYNTRA_MACHINA_TOKEN   operator-role Machina API key (/api/v1/api-keys)
+# On Machina: ATLAS_ENABLED=1, ATLAS_BASE_URL, ATLAS_TOKEN.
