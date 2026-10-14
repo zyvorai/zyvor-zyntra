@@ -1,0 +1,14 @@
+[
+  {
+    "name": "orders",
+    "owner": "commerce",
+    "source": {"kind": "sql", "reference": "orders"},
+    "object_type": "Order",
+    "schema": [
+      {"name": "order_id", "type": "string", "required": true},
+      {"name": "amount", "type": "number"}
+    ],
+    "quality": {"freshness": "5m", "completeness": 0.999, "unique": ["order_id"]},
+    "kpis": ["fulfilment_latency", "revenue"]
+  }
+]

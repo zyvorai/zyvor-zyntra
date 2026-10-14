@@ -525,3 +525,11 @@ See [KPI analytics queries](ANALYTICS_QUERIES.md) for `/api/v1/analytics/catalog
 See [KPI investigations](INVESTIGATIONS.md) for `/api/v1/analytics/investigate`, sustained level shifts, lagged change evidence and Ask with `scope: "investigation"`.
 
 See [KPI watch inbox](WATCHES.md) for watch configuration, retained incidents, acknowledgement and measured recovery.
+
+## Semantic contracts and decision confidence
+
+Packs may ship `data-contracts.json`; see [SEMANTIC.md](SEMANTIC.md). Endpoints:
+`GET /api/v1/semantic/catalog`, `GET /api/v1/semantic/lineage`,
+`GET /api/v1/semantic/resources`, `POST /api/v1/semantic/contracts/validate`,
+`POST /api/v1/semantic/confidence` (stateless; caller supplies normalized factors).
+Tenant-bound callers receive an empty catalog and lineage because contracts carry no tenant.
