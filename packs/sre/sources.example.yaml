@@ -1,0 +1,13 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with your own exports (same columns). Dry-run never
+# needs any variable. Only ids, severities, timings and owners are read; keep
+# customer data and incident narratives out of these files.
+variables: []
+files:
+  - {path: fixture/services.csv, description: "Monitoring export: service_id, name, team, tier, availability_pct, p99_latency_ms, error_rate_pct, saturation_pct"}
+  - {path: fixture/slo.csv, description: "SLO tool: service_id, slo_pct, budget_remaining_pct, burn_rate"}
+  - {path: fixture/incidents.csv, description: "Incident tool: incident_id, service_id, severity, state (open|resolved), mtta_min, mttr_min, caused_by_change (yes|no), postmortem (pending|done)"}
+  - {path: fixture/followups.csv, description: "Tracker: followup_id, incident_id, title, owner, due, state (open|closed), overdue (yes|no)"}
+  - {path: fixture/load.csv, description: "Paging tool: team, pages_week, toil_pct"}

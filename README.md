@@ -144,6 +144,8 @@ Sign in as `admin` / `Admin@321`. That account exists only while the policy file
 | Payments | [`packs/payments`](packs/payments) | `./bin/zyntra plan -f packs/payments` |
 | AI infrastructure | [`packs/gpu`](packs/gpu) | `./bin/zyntra plan -f packs/gpu` |
 | Imaging operations | [`packs/imaging-ops`](packs/imaging-ops) | `./bin/zyntra plan -f packs/imaging-ops` |
+| Virtualization fleet | [`packs/virtualization`](packs/virtualization) | `./bin/zyntra plan -f packs/virtualization` |
+| Site reliability (SRE) | [`packs/sre`](packs/sre) | `./bin/zyntra plan -f packs/sre` |
 
 A pack is a directory of files; a new industry is a new directory, not a project. `zyntra pack draft` drafts one from a sample export.
 

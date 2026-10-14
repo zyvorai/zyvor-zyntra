@@ -1,0 +1,5 @@
+followup_id,incident_id,title,owner,due,state,overdue
+fu-1,inc-102,Add retry budget to gateway client,a.rivera@example.com,2026-10-01,open,yes
+fu-2,inc-103,Canary gate for checkout config changes,j.okafor@example.com,2026-10-20,open,no
+fu-3,inc-103,Alert on queue age not depth,m.lindqvist@example.com,2026-09-28,open,yes
+fu-4,inc-104,Document notify failover runbook,a.rivera@example.com,2026-10-05,closed,no

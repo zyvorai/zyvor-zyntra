@@ -1,0 +1,53 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which services an incident touched and which follow-ups are still open
+# against it. Links say what depends on what; only kpis.yaml predicts.
+name: sre-operations
+
+objects:
+  - name: Service
+    kpis: [availability_pct, p99_latency_ms, error_rate_pct, saturation_pct]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: team, type: string}
+      - {name: tier, type: string}
+  - name: Incident
+    kpis: [open_incidents, mttr_worst_min]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: severity, type: string}
+      - {name: state, type: string}
+      - {name: postmortem, type: string}
+  - name: FollowUp
+    kpis: [open_followups, overdue_followups]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: owner, type: string, sensitive: true}
+      - {name: due, type: string}
+      - {name: state, type: string}
+
+links:
+  - {name: affects, from: Incident, to: Service}
+  - {name: tracks, from: FollowUp, to: Incident}
+
+mappings:
+  - {source: fixture/services.csv, type: Service, namespace: mon, key: service_id, props: {name: name, team: team, tier: tier}}
+  - source: fixture/incidents.csv
+    type: Incident
+    namespace: inc
+    key: incident_id
+    props: {name: incident_id, severity: severity, state: state, postmortem: postmortem}
+    links: [{type: affects, column: service_id, to: Service, namespace: mon}]
+  - source: fixture/followups.csv
+    type: FollowUp
+    namespace: trk
+    key: followup_id
+    props: {name: title, owner: owner, due: due, state: state}
+    links: [{type: tracks, column: incident_id, to: Incident, namespace: inc}]
+
+actions:
+  - id: chase_overdue_followups
+    inputs: [{name: followup, object_type: FollowUp, required: true}]
+    requires: [{input: followup, property: state, equals: open}]
+    affects: [Incident]

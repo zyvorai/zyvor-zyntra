@@ -1,0 +1,242 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Service reliability, incident flow, on-call load and post-incident follow-up.
+# The fixture/ files are a sample week; point the file sources at your
+# monitoring, incident-tool and tracker exports. Weights are starting points,
+# not truth.
+name: sre-operations
+
+kpis:
+  - id: availability_pct
+    name: Availability (worst service)
+    unit: "%"
+    unitClass: percent
+    owner: sre
+    value: 0
+    target: 99.9
+    direction: higher
+    criticality: critical
+    min: 0
+    max: 100
+    source: {kind: file, file: fixture/services.csv, field: "*.availability_pct", agg: min}
+
+  - id: error_budget_remaining_pct
+    name: Error budget remaining (worst service)
+    unit: "%"
+    unitClass: percent
+    owner: sre
+    value: 0
+    target: 30
+    direction: higher
+    criticality: high
+    min: 0
+    max: 100
+    source: {kind: file, file: fixture/slo.csv, field: "*.budget_remaining_pct", agg: min}
+
+  - id: burn_rate
+    name: Error budget burn rate (worst service)
+    unit: x
+    owner: sre
+    value: 0
+    target: 1
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/slo.csv, field: "*.burn_rate", agg: max}
+
+  - id: p99_latency_ms
+    name: p99 latency (worst service)
+    unit: ms
+    unitClass: duration
+    owner: platform
+    value: 0
+    target: 500
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/services.csv, field: "*.p99_latency_ms", agg: max}
+
+  - id: error_rate_pct
+    name: Error rate (worst service)
+    unit: "%"
+    unitClass: percent
+    owner: platform
+    value: 0
+    target: 0.5
+    direction: lower
+    min: 0
+    max: 100
+    source: {kind: file, file: fixture/services.csv, field: "*.error_rate_pct", agg: max}
+
+  - id: saturation_pct
+    name: Saturation (worst service)
+    unit: "%"
+    unitClass: percent
+    owner: platform
+    value: 0
+    target: 75
+    direction: lower
+    min: 0
+    max: 100
+    source: {kind: file, file: fixture/services.csv, field: "*.saturation_pct", agg: max}
+
+  - id: open_incidents
+    name: Open incidents
+    unit: incidents
+    unitClass: count
+    owner: oncall
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/incidents.csv, field: "#(state=open)"}
+
+  - id: mttr_worst_min
+    name: Longest time to resolve
+    unit: min
+    unitClass: duration
+    owner: oncall
+    value: 0
+    target: 60
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/incidents.csv, field: "*.mttr_min", agg: max}
+
+  - id: mtta_min
+    name: Mean time to acknowledge
+    unit: min
+    unitClass: duration
+    owner: oncall
+    value: 0
+    target: 5
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/incidents.csv, field: "*.mtta_min", agg: avg}
+
+  - id: change_induced_incidents
+    name: Change-induced incidents
+    unit: incidents
+    unitClass: count
+    owner: platform
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/incidents.csv, field: "#(caused_by_change=yes)"}
+
+  - id: open_followups
+    name: Open incident follow-ups
+    unit: items
+    unitClass: count
+    owner: sre
+    value: 0
+    target: 5
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/followups.csv, field: "#(state=open)"}
+
+  - id: overdue_followups
+    name: Overdue incident follow-ups
+    unit: items
+    unitClass: count
+    owner: sre
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/followups.csv, field: "#(overdue=yes)"}
+
+  - id: postmortems_pending
+    name: Postmortems pending
+    unit: reviews
+    unitClass: count
+    owner: sre
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/incidents.csv, field: "#(postmortem=pending)"}
+
+  - id: pager_load_per_week
+    name: Pages per week (busiest team)
+    unit: pages
+    unitClass: count
+    owner: oncall
+    value: 0
+    target: 15
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/load.csv, field: "*.pages_week", agg: max}
+
+  - id: toil_pct
+    name: Toil share (busiest team)
+    unit: "%"
+    unitClass: percent
+    owner: sre
+    value: 0
+    target: 30
+    direction: lower
+    min: 0
+    max: 100
+    source: {kind: file, file: fixture/load.csv, field: "*.toil_pct", agg: max}
+
+edges:
+  - {from: error_rate_pct, to: availability_pct, weight: -0.5, confidence: 0.6, why: more failed requests directly lower availability}
+  - {from: saturation_pct, to: p99_latency_ms, weight: 0.6, confidence: 0.5, why: queues grow as capacity runs out}
+  - {from: p99_latency_ms, to: error_rate_pct, weight: 0.1, confidence: 0.4, why: slow calls time out and count as errors}
+  - {from: error_rate_pct, to: burn_rate, weight: 0.8, confidence: 0.6, why: errors consume the error budget}
+  - {from: burn_rate, to: error_budget_remaining_pct, weight: -0.5, confidence: 0.6, why: a higher burn rate drains the budget faster}
+  - {from: change_induced_incidents, to: open_incidents, weight: 0.5, confidence: 0.5, why: bad changes open incidents}
+  - {from: overdue_followups, to: change_induced_incidents, weight: 0.2, confidence: 0.3, why: unfixed causes recur}
+  - {from: open_incidents, to: pager_load_per_week, weight: 0.4, confidence: 0.5, why: each incident pages the on-call}
+  - {from: pager_load_per_week, to: toil_pct, weight: 0.3, confidence: 0.4, why: reactive paging crowds out engineering work}
+  - {from: open_incidents, to: postmortems_pending, weight: 0.5, confidence: 0.5, why: resolved incidents owe a postmortem}
+
+actions:
+  - id: freeze_risky_deploys
+    title: Freeze non-essential deploys on at-risk services
+    description: Hold changes to services whose error budget is nearly spent until burn rate recovers.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: change_induced_incidents, change: -0.4, uncertainty: 0.3}
+      - {kpi: burn_rate, change: -0.2, uncertainty: 0.3}
+
+  - id: scale_out_service
+    title: Scale out the saturated service
+    description: Add capacity to the most saturated tier-1 service.
+    adapter: noop
+    risk: medium
+    invariants:
+      - {kpi: availability_pct, max_worsen: 0.1, why: scaling must not cost availability}
+    effects:
+      - {kpi: saturation_pct, change: -0.25, uncertainty: 0.2}
+      - {kpi: p99_latency_ms, change: -0.2, uncertainty: 0.3}
+
+  - id: add_oncall_capacity
+    title: Add a secondary on-call for the busiest team
+    description: Share pager load and cut time to acknowledge.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: mtta_min, change: -0.3, uncertainty: 0.3}
+      - {kpi: pager_load_per_week, change: -0.3, uncertainty: 0.3}
+
+  - id: chase_overdue_followups
+    title: Chase overdue incident follow-ups
+    description: Escalate overdue post-incident items to their owners and re-date or close each one.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: overdue_followups, change: -0.6, uncertainty: 0.25}
+      - {kpi: open_followups, change: -0.3, uncertainty: 0.3}
+
+  - id: schedule_postmortem_review
+    title: Hold a postmortem review session
+    description: Clear the pending postmortems and turn findings into tracked follow-ups.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: postmortems_pending, change: -0.8, uncertainty: 0.2}

@@ -1,0 +1,5 @@
+service_id,slo_pct,budget_remaining_pct,burn_rate
+svc-api,99.9,62,0.8
+svc-checkout,99.9,18,2.4
+svc-search,99.9,74,0.5
+svc-notify,99.5,41,1.1
