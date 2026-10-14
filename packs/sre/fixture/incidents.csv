@@ -1,0 +1,5 @@
+incident_id,service_id,severity,state,mtta_min,mttr_min,caused_by_change,postmortem
+inc-101,svc-checkout,sev1,open,4,0,yes,pending
+inc-102,svc-api,sev2,resolved,6,38,no,done
+inc-103,svc-checkout,sev2,resolved,9,74,yes,pending
+inc-104,svc-notify,sev3,resolved,12,55,no,done

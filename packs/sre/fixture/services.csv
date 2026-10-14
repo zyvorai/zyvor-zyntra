@@ -1,0 +1,5 @@
+service_id,name,team,tier,availability_pct,p99_latency_ms,error_rate_pct,saturation_pct
+svc-api,Public API,platform,tier-1,99.93,420,0.4,71
+svc-checkout,Checkout,commerce,tier-1,99.81,610,1.1,83
+svc-search,Search,discovery,tier-2,99.95,310,0.2,58
+svc-notify,Notifications,platform,tier-3,99.60,180,0.7,44

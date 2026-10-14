@@ -53,6 +53,8 @@ Compose, Helm, k3s and systemd installs, see [Deploy](./deploy.md).
 | Payments | `packs/payments` | `./bin/zyntra plan -f packs/payments` |
 | AI infrastructure | `packs/gpu` | `./bin/zyntra plan -f packs/gpu` |
 | Imaging operations | `packs/imaging-ops` | `./bin/zyntra plan -f packs/imaging-ops` |
+| Virtualization fleet | `packs/virtualization` | `./bin/zyntra plan -f packs/virtualization` |
+| Site reliability (SRE) | `packs/sre` | `./bin/zyntra plan -f packs/sre` |
 
 A pack is a directory of files: `pack.yaml`, `kpis.yaml`, `sources.example.yaml`, a README
 and a `fixture/` of sample exports. `zyntra pack draft -industry TEXT -sample FILE` drafts one
