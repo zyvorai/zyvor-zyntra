@@ -25,6 +25,7 @@ var reserved = map[string]bool{
 	"ZYNTRA_SESSION_SECRET":     true,
 	"ZYNTRA_EXEC_TOKEN":         true,
 	"ZYNTRA_INGEST_TOKEN":       true,
+	"ZYNTRA_DEPLOY_TOKEN":       true,
 	"ZYNTRA_KEEP_TOKEN":         true,
 	"ZYNTRA_OIDC_CLIENT_SECRET": true,
 	"ZYNTRA_AI_API_KEY":         true,

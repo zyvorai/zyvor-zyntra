@@ -61,7 +61,8 @@ func Parse(b []byte) (Inventory, error) {
 	if err := json.Unmarshal(b, &nl); err != nil {
 		return nil, fmt.Errorf("kubernetes: decode nodes: %w", err)
 	}
-	inv := Inventory{MetricNodesTotal: float64(len(nl.Items))}
+	// nodes_ready is always present so a full outage reads 0, not "missing".
+	inv := Inventory{MetricNodesTotal: float64(len(nl.Items)), MetricNodesReady: 0}
 	for _, n := range nl.Items {
 		for _, c := range n.Status.Conditions {
 			if c.Type == "Ready" && c.Status == "True" {

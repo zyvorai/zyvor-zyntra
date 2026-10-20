@@ -38,3 +38,9 @@ func TestAllowedAndRefs(t *testing.T) {
 		t.Fatalf("Refs = %v", got)
 	}
 }
+
+func TestDeployTokenReserved(t *testing.T) {
+	if Allowed("ZYNTRA_DEPLOY_TOKEN") {
+		t.Fatal("ZYNTRA_DEPLOY_TOKEN must not be readable by packs")
+	}
+}

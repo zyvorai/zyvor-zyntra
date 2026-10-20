@@ -74,3 +74,11 @@ func TestCompileErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestCompileNonASCIIDayDoesNotPanic(t *testing.T) {
+	// U+212A KELVIN SIGN is 3 bytes but lowers to "k" (1 byte).
+	set := Set{"w": {Days: []string{"K"}, Start: "10:00", End: "17:00"}}
+	if err := set.Compile(time.UTC); err == nil {
+		t.Fatal("want error for unknown day")
+	}
+}

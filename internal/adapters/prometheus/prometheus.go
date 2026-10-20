@@ -8,6 +8,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -46,7 +48,7 @@ func (c *Client) Query(ctx context.Context, q string) (float64, error) {
 	}
 	defer resp.Body.Close()
 	var r response
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 4<<20)).Decode(&r); err != nil {
 		return 0, fmt.Errorf("prometheus: decode: %w", err)
 	}
 	if r.Status != "success" {
@@ -79,5 +81,12 @@ func (c *Client) Query(ctx context.Context, q string) (float64, error) {
 	if !ok {
 		return 0, fmt.Errorf("prometheus: malformed sample value")
 	}
-	return strconv.ParseFloat(s, 64)
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0, fmt.Errorf("prometheus: non-finite sample value %q", s)
+	}
+	return v, nil
 }
