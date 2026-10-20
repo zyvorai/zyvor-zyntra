@@ -22,8 +22,12 @@ func runExecutive(out io.Writer, m *graph.Model, file, audience, decision string
 	if err != nil {
 		return err
 	}
+	overlay, err := loadOverlay(file)
+	if err != nil {
+		return err
+	}
 	in := executive.Input{
-		Model: m, Plan: res, Gaps: gaps.Detect(m), Overlay: loadOverlay(file),
+		Model: m, Plan: res, Gaps: gaps.Detect(m), Overlay: overlay,
 		Now: time.Now(), Audience: audience,
 	}
 	inbox := executive.BuildInbox(in)
@@ -51,18 +55,20 @@ func runExecutive(out io.Writer, m *graph.Model, file, audience, decision string
 	return tw.Flush()
 }
 
-func loadOverlay(file string) executive.Overlay {
+// loadOverlay reads executive.yaml next to the pack. A missing file is an empty
+// overlay; an unreadable or malformed one is an error so a typo cannot silently
+// drop the named decisions.
+func loadOverlay(file string) (executive.Overlay, error) {
 	dir := file
 	if fi, err := os.Stat(file); err == nil && !fi.IsDir() {
 		dir = filepath.Dir(file)
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "executive.yaml"))
 	if err != nil {
-		return executive.Overlay{}
+		if os.IsNotExist(err) {
+			return executive.Overlay{}, nil
+		}
+		return executive.Overlay{}, err
 	}
-	o, err := executive.ParseOverlay(b)
-	if err != nil {
-		return executive.Overlay{}
-	}
-	return o
+	return executive.ParseOverlay(b)
 }

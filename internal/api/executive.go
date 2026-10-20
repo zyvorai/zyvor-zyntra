@@ -4,6 +4,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,10 +36,14 @@ func (s *Server) overlay(m *graph.Model) executive.Overlay {
 	}
 	b, err := os.ReadFile(filepath.Join(s.opt.PackDir, "executive.yaml"))
 	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("executive overlay: %v", err)
+		}
 		return executive.Overlay{}
 	}
 	o, err := executive.ParseOverlay(b)
 	if err != nil {
+		log.Printf("executive overlay ignored: %v", err)
 		return executive.Overlay{}
 	}
 	return o

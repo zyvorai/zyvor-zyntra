@@ -55,10 +55,20 @@ const OWNER_KEY = 'zyntra.owner';
 
 /** useOwner keeps one owner filter across the Gaps and Plan pages. */
 export function useOwner(): [string, (o: string) => void] {
-  const [owner, set] = useState(() => localStorage.getItem(OWNER_KEY) ?? '');
+  const [owner, set] = useState(() => {
+    try {
+      return localStorage.getItem(OWNER_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
   const update = useCallback((o: string) => {
-    if (o) localStorage.setItem(OWNER_KEY, o);
-    else localStorage.removeItem(OWNER_KEY);
+    try {
+      if (o) localStorage.setItem(OWNER_KEY, o);
+      else localStorage.removeItem(OWNER_KEY);
+    } catch {
+      /* storage blocked: keep the filter for this session only */
+    }
     set(o);
   }, []);
   return [owner, update];

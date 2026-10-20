@@ -17,7 +17,7 @@ id="${1:?decision id}"; shift
 api() { curl -fsS -H "Authorization: Bearer $ZYNTRA_DEPLOY_TOKEN" -H 'Content-Type: application/json' "$@"; }
 report() { # stage site state note
   api -X POST "$ZYNTRA_URL/api/v1/rollouts/$id/report" \
-    -d "$(printf '{"stage":"%s","site":"%s","state":"%s","note":"%s"}' "$1" "$2" "$3" "$4")"
+    -d "$(jq -n --arg stage "$1" --arg site "$2" --arg state "$3" --arg note "$4" '{stage:$stage,site:$site,state:$state,note:$note}')"
 }
 while true; do
   ro="$(api "$ZYNTRA_URL/api/v1/rollouts/$id")"
