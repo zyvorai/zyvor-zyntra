@@ -62,7 +62,9 @@ func (w *Window) Compile(def *time.Location) error {
 	}
 	w.days = map[time.Weekday]bool{}
 	for _, d := range w.Days {
-		wd, ok := weekdays[strings.ToLower(d)[:min(3, len(d))]]
+		key := strings.ToLower(d)
+		key = key[:min(3, len(key))] // length of the lowered string: lowering can shrink it
+		wd, ok := weekdays[key]
 		if !ok {
 			return fmt.Errorf("unknown day %q", d)
 		}
