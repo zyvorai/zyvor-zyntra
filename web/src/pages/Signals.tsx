@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ago, can, fmt, setManual, type InputsResponse, type ManualInput, type Model, type SourceStatus } from '../api';
 import { useApi } from '../hooks';
 import { useWho } from '../session';
-import { Card, Empty, ErrorNote, KpiValue, PageHero, Pill, Sparkline, kpiMet } from '../components/ui';
+import { Card, Empty, ErrorNote, kpiMet, KpiValue, PageHero, PageSkeleton, Pill, Sparkline, TableScroll } from '../components/ui';
 
 type Hist = { kpi: string; points: { t: string; v: number }[] };
 
@@ -105,7 +105,8 @@ export default function Signals() {
         tint="green"
         lede="Live sources feed the KPI graph: Prometheus and product APIs, file exports, sheets, webhooks and values people enter. A source that fails keeps its last value and is marked fallback; old data is marked stale."
       />
-      <ErrorNote message={src.error || graph.error} />
+      <ErrorNote message={src.error || graph.error} onRetry={() => { src.reload(); graph.reload(); }} />
+      {!src.data && !src.error ? <PageSkeleton /> : null}
       <div className="source-grid">
         {sources.length === 0 && src.data ? <Empty>No live sources configured.</Empty> : null}
         {sources.map((s) => {
@@ -132,7 +133,7 @@ export default function Signals() {
 
       {manual.length ? (
         <Card title="Manual values" aside={<span className="muted small">Every entry is written to the audit chain</span>}>
-          <table className="table compact">
+          <TableScroll><table className="table compact"><caption className="sr-only">Manual entries</caption>
             <thead>
               <tr>
                 <th>KPI</th>
@@ -147,7 +148,7 @@ export default function Signals() {
                 <ManualRow key={m.kpi} m={m} editable={can(who, 'propose')} onSaved={() => { inputs.reload(); graph.reload(); }} />
               ))}
             </tbody>
-          </table>
+          </table></TableScroll>
         </Card>
       ) : null}
 
@@ -156,7 +157,7 @@ export default function Signals() {
           <p className="muted small">
             Gateways POST JSON to <code>/api/v1/ingest/&lt;channel&gt;</code> with the ingest token. The last document wins.
           </p>
-          <table className="table compact">
+          <TableScroll><table className="table compact"><caption className="sr-only">Webhook sources</caption>
             <thead>
               <tr>
                 <th>Channel</th>
@@ -173,7 +174,7 @@ export default function Signals() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></TableScroll>
         </Card>
       ) : null}
 
@@ -181,7 +182,7 @@ export default function Signals() {
         {shown.length === 0 ? (
           <Empty>No KPIs.</Empty>
         ) : (
-          <table className="table">
+          <TableScroll><table className="table"><caption className="sr-only">Signal values by KPI</caption>
             <thead>
               <tr>
                 <th>KPI</th>
@@ -217,7 +218,7 @@ export default function Signals() {
                 );
               })}
             </tbody>
-          </table>
+          </table></TableScroll>
         )}
       </Card>
     </>

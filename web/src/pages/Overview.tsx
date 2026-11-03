@@ -23,6 +23,7 @@ export default function Overview({ pulse, setPage }: { pulse: Pulse | null; setP
   return (
     <>
       <PageHero
+        size="display"
         eyebrow="Decision intelligence"
         title={gaps.length ? `${gaps.length} KPI${gaps.length === 1 ? '' : 's'} off target` : 'Every KPI on target'}
         lede="Live signals from Netra eBPF, Gravia and Fabric, propagated through your KPI graph into ranked, human-approved actions."

@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, AUTH_EXPIRED, logout, type Meta, type ServedPack, type WhoAmI } from './api';
 import { useApi, usePulse } from './hooks';
 import { pageFromHash, pageTitles, tenantPages, type Page } from './nav';
 import { readStoredTheme, toggleTheme, type Theme } from './theme';
 import Nav from './components/Nav';
+import CommandPalette from './components/CommandPalette';
+import { PageSkeleton } from './components/ui';
 import Login from './pages/Login';
 import Overview from './pages/Overview';
 import Gaps from './pages/Gaps';
@@ -42,8 +44,22 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [announce, setAnnounce] = useState('');
+  const first = useRef(true);
   useEffect(() => {
     document.title = `${pageTitles[page]} · Zyntra`;
+    // Tell screen readers the page changed and put the keyboard at its top;
+    // not on first load, where the browser's own focus is right.
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    setAnnounce(`${pageTitles[page]} page`);
+    const h1 = document.querySelector<HTMLElement>('main h1');
+    if (h1) {
+      h1.tabIndex = -1;
+      h1.focus({ preventScroll: true });
+    }
   }, [page]);
 
   const setPage = useCallback((p: Page) => {
@@ -69,6 +85,10 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
         tenant={tenant}
         packs={served.data ?? undefined}
       />
+      <CommandPalette setPage={setPage} ontology={meta?.ontology} tenant={tenant} />
+      <div className="sr-only" role="status" aria-live="polite">
+        {announce}
+      </div>
       <main id="main">
         {who.default_password ? (
           <div className="banner" role="alert">
@@ -133,7 +153,14 @@ export default function App() {
     return () => window.removeEventListener(AUTH_EXPIRED, onExpired);
   }, [check]);
 
-  if (session.state === 'loading') return <div className="boot" aria-busy="true" />;
+  if (session.state === 'loading')
+    return (
+      <div className="boot" aria-busy="true">
+        <main style={{ paddingTop: 80 }}>
+          <PageSkeleton />
+        </main>
+      </div>
+    );
   if (session.state === 'anon') return <Login meta={meta} onSignedIn={check} />;
   const authRequired = session.who.auth_required;
   return (

@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Inbox } from 'lucide-react';
 import { fmt, unitOf, type KPI } from '../api';
 
 export function PageHero({
@@ -7,7 +9,9 @@ export function PageHero({
   lede,
   tint,
   actions,
+  size,
 }: {
+  size?: 'display';
   eyebrow?: string;
   title: string;
   lede?: ReactNode;
@@ -15,7 +19,7 @@ export function PageHero({
   actions?: ReactNode;
 }) {
   return (
-    <header className={`page-hero${tint ? ` hero-tint-${tint}` : ''}`}>
+    <header className={`page-hero${size === 'display' ? ' display' : ''}${tint ? ` hero-tint-${tint}` : ''}`}>
       {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
       <h1>{title}</h1>
       {lede ? <p>{lede}</p> : null}
@@ -54,16 +58,116 @@ export function Pill({ tone = 'neutral', children }: { tone?: 'ok' | 'warn' | 'b
 
 export const riskTone = (r?: string) => (r === 'high' ? 'bad' : r === 'medium' ? 'warn' : 'ok');
 
-export function Empty({ children }: { children: ReactNode }) {
-  return <p className="empty">{children}</p>;
+export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  if (!action) return <p className="empty">{children}</p>;
+  return (
+    <div className="empty-state">
+      <Inbox size={28} aria-hidden />
+      <p className="empty">{children}</p>
+      {action}
+    </div>
+  );
 }
 
-export function ErrorNote({ message }: { message: string }) {
+export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
   if (!message) return null;
+  if (!onRetry)
+    return (
+      <p className="error-note" role="alert">
+        {message}
+      </p>
+    );
   return (
-    <p className="error-note" role="alert">
-      {message}
-    </p>
+    <div className="error-note with-retry" role="alert">
+      <span>{message}</span>
+      <Button size="sm" onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
+  );
+}
+
+export function Button({
+  variant = 'quiet',
+  size,
+  className = '',
+  type = 'button',
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'quiet' | 'danger'; size?: 'sm' }) {
+  return <button type={type} className={`btn btn-${variant}${size ? ` btn-${size}` : ''} ${className}`.trim()} {...rest} />;
+}
+
+/** A shimmering placeholder; decorative, so hidden from assistive tech. */
+export function Skeleton({ className = 'skeleton-line' }: { className?: string }) {
+  return <span className={`skeleton ${className}`} aria-hidden />;
+}
+
+/** Placeholder for a page body while its first request is in flight. */
+export function PageSkeleton({ stats = true, rows = 4 }: { stats?: boolean; rows?: number }) {
+  return (
+    <div aria-busy="true" aria-live="polite">
+      <span className="sr-only">Loading</span>
+      {stats ? (
+        <div className="skeleton-stats" aria-hidden>
+          <Skeleton className="" />
+          <Skeleton className="" />
+          <Skeleton className="" />
+        </div>
+      ) : null}
+      <div className="card" aria-hidden>
+        {Array.from({ length: rows }, (_, i) => (
+          <Skeleton key={i} className={i % 3 === 2 ? 'skeleton-line short' : 'skeleton-line'} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Wraps a table so it scrolls sideways on a phone and keeps its header in view. */
+export function TableScroll({ children }: { children: ReactNode }) {
+  return <div className="table-scroll">{children}</div>;
+}
+
+/** Fades a block in once it scrolls into view; always visible without IntersectionObserver. */
+export function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.12 },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={`zv-reveal${visible ? ' zv-reveal--visible' : ''} ${className}`.trim()} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+      {children}
+    </div>
+  );
+}
+
+/** A hairline-ruled strip of large figures, for the top of a landing page. */
+export function MetricBand({ items }: { items: { label: string; value: ReactNode }[] }) {
+  return (
+    <div className="metric-band">
+      {items.map((m) => (
+        <div key={m.label}>
+          <span>{m.label}</span>
+          <b>{m.value}</b>
+        </div>
+      ))}
+    </div>
   );
 }
 

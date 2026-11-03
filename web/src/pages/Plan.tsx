@@ -4,13 +4,13 @@ import { useApi, useOwner, withOwner } from '../hooks';
 import type { Page } from '../nav';
 import { useWho } from '../session';
 import SimResultView from '../components/SimResultView';
-import { Card, Empty, ErrorNote, OwnerFilter, PageHero, Pill, riskTone } from '../components/ui';
+import { Card, Empty, ErrorNote, OwnerFilter, PageHero, PageSkeleton, Pill, riskTone } from '../components/ui';
 
 const confTone = { high: 'ok', medium: 'warn', low: 'bad' } as const;
 
 export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
   const [owner, setOwner] = useOwner();
-  const { data, error } = useApi<PlanResponse>(withOwner('/api/v1/plan', owner), 15000);
+  const { data, error, reload } = useApi<PlanResponse>(withOwner('/api/v1/plan', owner), 15000);
   const [open, setOpen] = useState<string | null>(null);
   const [explain, setExplain] = useState<Record<string, Answer>>({});
   const [busy, setBusy] = useState('');
@@ -64,7 +64,8 @@ export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
         tint="green"
         lede="Every action, and pairs that work together, simulated against live values. Ranked on the worst case: criticality-weighted improvement at the pessimistic end of every band, minus risk and stale-input penalties. Anything that would breach a hard constraint is listed separately. Nothing runs until a human approves it."
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error} onRetry={reload} />
+      {!data && !error ? <PageSkeleton /> : null}
       <OwnerFilter owners={data?.owners} value={owner} onChange={setOwner} />
       {data?.unusable_inputs?.length ? (
         <p className="info-note">

@@ -822,3 +822,21 @@ main.login-store-scroll {
 .login-spin { animation: login-spin 0.9s linear infinite; }
 @keyframes login-spin { to { transform: rotate(360deg); } }
 .login-footer { text-align: center; margin: 0 0 1.25rem; }
+
+/* Dark mode: the sign-in page follows the console theme. */
+[data-theme='dark'] .login-page,
+[data-theme='dark'] .login-page.zeus-login {
+  color: var(--text-primary);
+  background: var(--bg-page);
+  background-color: var(--bg-page);
+}
+[data-theme='dark'] .login-chapter,
+[data-theme='dark'] .login-hero {
+  background: transparent;
+}
+[data-theme='dark'] .login-input {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+[data-theme='dark'] .login-input::placeholder { color: var(--text-tertiary); }

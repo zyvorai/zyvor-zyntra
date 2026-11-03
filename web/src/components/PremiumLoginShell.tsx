@@ -46,7 +46,7 @@ export function PremiumLoginShell({
       <main className="login-store-scroll" aria-label="Sign in">
         <section className="login-chapter login-chapter-hero" data-tone={accent} aria-label={productName}>
           <div className="login-chapter-inner">
-            {logo ? <div className="login-logo" style={{ marginBottom: '1.25rem' }}>{logo}</div> : null}
+            {logo ? <div className="login-logo login-logo-spaced">{logo}</div> : null}
             <p className="login-wordmark">{productName}</p>
             {instanceMeta ? <div className="login-instance-meta">{instanceMeta}</div> : null}
             <h1 className="login-hero-title">{heroTitle}</h1>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api, fmt, type Comparison, type Scenario } from '../api';
 import { useApi } from '../hooks';
-import { Card, Empty, ErrorNote, PageHero, Pill } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, TableScroll } from '../components/ui';
 
 export default function Scenarios() {
   const list = useApi<{ scenarios: Scenario[] }>('/api/v1/scenarios');
@@ -62,7 +62,8 @@ export default function Scenarios() {
         tint="green"
         lede="Save a plan with its assumptions, run it against the current model and data, and compare plans side by side. Running a scenario never changes anything."
       />
-      <ErrorNote message={list.error || err} />
+      <ErrorNote message={list.error || err} onRetry={list.error ? list.reload : undefined} />
+      {!list.data && !list.error ? <PageSkeleton stats={false} /> : null}
       <Card title="New scenario">
         <div className="form-grid">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name, e.g. Add GPUs and reroute" maxLength={80} aria-label="Scenario name" />
@@ -84,7 +85,7 @@ export default function Scenarios() {
         {scs.length === 0 ? (
           <Empty>No scenarios yet.</Empty>
         ) : (
-          <table className="table">
+          <TableScroll><table className="table"><caption className="sr-only">Scenario list</caption>
             <thead>
               <tr>
                 <th />
@@ -121,12 +122,12 @@ export default function Scenarios() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></TableScroll>
         )}
       </Card>
       {cmp ? (
         <Card title="Comparison">
-          <table className="table">
+          <TableScroll><table className="table"><caption className="sr-only">Scenario KPI comparison</caption>
             <thead>
               <tr>
                 <th>KPI</th>
@@ -180,7 +181,7 @@ export default function Scenarios() {
                 ))}
               </tr>
             </tbody>
-          </table>
+          </table></TableScroll>
         </Card>
       ) : null}
     </>

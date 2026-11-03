@@ -1,10 +1,10 @@
 import { fmt, pct, sev, type Gap } from '../api';
 import { useApi, useOwner, withOwner } from '../hooks';
-import { Card, Empty, ErrorNote, Meter, OwnerFilter, PageHero, Stat } from '../components/ui';
+import { Card, Empty, ErrorNote, Meter, OwnerFilter, PageHero, PageSkeleton, Stat } from '../components/ui';
 
 export default function Gaps() {
   const [owner, setOwner] = useOwner();
-  const { data, error } = useApi<{ gaps: Gap[]; severity_total: number; owners?: string[] }>(withOwner('/api/v1/gaps', owner), 15000);
+  const { data, error, reload } = useApi<{ gaps: Gap[]; severity_total: number; owners?: string[] }>(withOwner('/api/v1/gaps', owner), 15000);
   const gaps = data?.gaps ?? [];
   return (
     <>
@@ -14,7 +14,8 @@ export default function Gaps() {
         tint="amber"
         lede="KPIs that miss their target, ranked by relative shortfall. Severity 25% means the value is a quarter of the way off target."
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error} onRetry={reload} />
+      {!data && !error ? <PageSkeleton /> : null}
       <OwnerFilter owners={data?.owners} value={owner} onChange={setOwner} />
       <div className="stats">
         <Stat label="Gaps" value={data ? gaps.length : '—'} tone={gaps.length ? 'warn' : 'ok'} />

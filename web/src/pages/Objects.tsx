@@ -4,14 +4,14 @@ import { useApi } from '../hooks';
 import { display } from '../format';
 import { objectFromHash, openObject } from '../nav';
 import { useWho } from '../session';
-import { Card, Empty, ErrorNote, PageHero, Pill } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, Pill, TableScroll } from '../components/ui';
 
 const nameOf = (o: OntObject) => String(o.props.name?.v ?? o.id);
 const when = (s: string) => new Date(s).toLocaleString();
 
 function Provenance({ o }: { o: OntObject }) {
   return (
-    <table className="table compact">
+    <TableScroll><table className="table compact"><caption className="sr-only">Property provenance</caption>
       <thead>
         <tr>
           <th>Property</th>
@@ -33,7 +33,7 @@ function Provenance({ o }: { o: OntObject }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></TableScroll>
   );
 }
 
@@ -44,7 +44,7 @@ function History({ id }: { id: string }) {
   return (
     <details className="trace">
       <summary>Change history ({changes.length})</summary>
-      <table className="table compact">
+      <TableScroll><table className="table compact"><caption className="sr-only">Property changes</caption>
         <thead>
           <tr>
             <th>When</th>
@@ -65,7 +65,7 @@ function History({ id }: { id: string }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></TableScroll>
     </details>
   );
 }
@@ -117,7 +117,7 @@ function Detail({ id }: { id: string }) {
       ) : (
         <ul className="plain">
           {(data.impact ?? []).map((i) => (
-            <li key={i.object.id} style={{ marginLeft: (i.depth - 1) * 16 }}>
+            <li key={i.object.id} className="impact-item" style={{ ["--depth" as string]: i.depth - 1 }}>
               <button className="linklike" onClick={() => openObject(i.object.id)}>
                 {nameOf(i.object)}
               </button>{' '}
@@ -206,7 +206,7 @@ function Connectors() {
   return (
     <Card title="Sources" aside={<Pill tone={data.connectors.every((c) => c.healthy) ? 'ok' : 'warn'}>{data.connectors.filter((c) => c.healthy).length} of {data.connectors.length} healthy</Pill>}>
       <ErrorNote message={err} />
-      <table className="table compact">
+      <TableScroll><table className="table compact"><caption className="sr-only">Connector health</caption>
         <thead>
           <tr>
             <th>Source</th>
@@ -243,7 +243,7 @@ function Connectors() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></TableScroll>
     </Card>
   );
 }

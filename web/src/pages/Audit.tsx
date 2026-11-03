@@ -1,7 +1,7 @@
 import { ago, type AuditEvent, type ChainStatus } from '../api';
 import { useApi } from '../hooks';
 import { openDecision } from '../nav';
-import { Card, Empty, ErrorNote, PageHero, Pill } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, TableScroll } from '../components/ui';
 
 interface KeepStatus {
   configured: boolean;
@@ -40,7 +40,8 @@ export default function Audit() {
         title="Audit"
         lede="Every proposal transition in Zyntra, hash-chained so edits or deletions are detectable, alongside the audit chain kept by Fabric Keep."
       />
-      <ErrorNote message={local.error} />
+      <ErrorNote message={local.error} onRetry={local.reload} />
+      {!local.data && !local.error ? <PageSkeleton stats={false} /> : null}
       <Card
         title="Zyntra decisions"
         aside={
@@ -57,7 +58,7 @@ export default function Audit() {
         {events.length === 0 ? (
           <Empty>No decisions yet.</Empty>
         ) : (
-          <table className="table compact">
+          <TableScroll><table className="table compact"><caption className="sr-only">Decision events</caption>
             <thead>
               <tr>
                 <th>When</th>
@@ -93,7 +94,7 @@ export default function Audit() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></TableScroll>
         )}
       </Card>
 
@@ -114,7 +115,7 @@ export default function Audit() {
         ) : kAudit.length === 0 ? (
           <Empty>{keepAudit.error || 'No Keep audit entries yet.'}</Empty>
         ) : (
-          <table className="table compact">
+          <TableScroll><table className="table compact"><caption className="sr-only">Keep receipts</caption>
             <thead>
               <tr>
                 <th>When</th>
@@ -133,7 +134,7 @@ export default function Audit() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></TableScroll>
         )}
       </Card>
     </>

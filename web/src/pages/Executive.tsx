@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { api } from '../api';
 import { useApi, withOwner } from '../hooks';
-import { Card, Empty, ErrorNote, PageHero, Pill } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, TableScroll } from '../components/ui';
 
 type Audience = 'leadership' | 'ceo' | 'cto' | 'marketing';
 
@@ -124,6 +124,7 @@ export default function Executive() {
   return (
     <>
       <PageHero
+        size="display"
         eyebrow="Zyntra Executive"
         title="Know what needs a decision"
         lede="Compare the options, including postpone and do nothing. The simulator ranks. This page only shows the brief, the constraint, and whether the last decision matched the forecast."
@@ -138,7 +139,8 @@ export default function Executive() {
           </div>
         }
       />
-      {inbox.error ? <ErrorNote message={inbox.error} /> : null}
+      {inbox.error ? <ErrorNote message={inbox.error} onRetry={inbox.reload} /> : null}
+      {!inbox.data && !inbox.error ? <PageSkeleton stats={false} /> : null}
       {note ? <ErrorNote message={note} /> : null}
       <div className="grid-2">
         <Card title="Decision inbox" aside={<Pill tone={inbox.data?.stale_inputs ? 'warn' : 'ok'}>{inbox.data?.stale_inputs ? `${inbox.data.stale_inputs} stale` : 'inputs usable'}</Pill>}>
@@ -186,7 +188,7 @@ export default function Executive() {
             <p>{brief.data.narrative}</p>
           </Card>
           <Card title="Options" aside={<span className="muted">including postpone and do nothing</span>}>
-            <table className="data">
+            <TableScroll><table className="data"><caption className="sr-only">Decision options</caption>
               <thead>
                 <tr>
                   <th>Option</th>
@@ -213,12 +215,12 @@ export default function Executive() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></TableScroll>
             {probe ? <pre className="code">{probe}</pre> : null}
           </Card>
           <div className="grid-2">
             <Card title="Evidence">
-              <table className="data">
+              <TableScroll><table className="data"><caption className="sr-only">Evidence behind the brief</caption>
                 <thead>
                   <tr><th>KPI</th><th>Value</th><th>Target</th><th>Fresh</th></tr>
                 </thead>
@@ -232,7 +234,7 @@ export default function Executive() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></TableScroll>
             </Card>
             <Card title="Uncertainty and conflicts">
               <ul className="list">

@@ -1,10 +1,10 @@
 import { fmt, type Contradiction, type EdgeProposal, type Model } from '../api';
 import PackDraftCard from '../components/PackDraft';
 import { useApi } from '../hooks';
-import { Card, ErrorNote, KpiValue, PageHero, Pill, kpiMet, riskTone } from '../components/ui';
+import { Card, ErrorNote, KpiValue, PageHero, PageSkeleton, Pill, kpiMet, riskTone } from '../components/ui';
 
 export default function ModelPage() {
-  const { data, error } = useApi<{ model: Model; refreshed_at: string }>('/api/v1/graph', 30000);
+  const { data, error, reload } = useApi<{ model: Model; refreshed_at: string }>('/api/v1/graph', 30000);
   const m = data?.model;
   const name = (id: string) => m?.kpis.find((k) => k.id === id)?.name ?? id;
   const edges = useApi<{ edges: EdgeProposal[]; note: string }>('/api/v1/ai/edges', 60000);
@@ -21,7 +21,8 @@ export default function ModelPage() {
             : 'KPIs with targets, weighted cause-and-effect edges between them, and the actions Zyntra may propose.'
         }
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error} onRetry={reload} />
+      {!data && !error ? <PageSkeleton /> : null}
       {m ? (
         <>
           <Card title={`KPIs (${m.kpis.length})`}>

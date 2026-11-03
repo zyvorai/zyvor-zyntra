@@ -32,6 +32,7 @@ export default function Nav({
   packs?: ServedPack[];
 }) {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [sheet, setSheet] = useState(false);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
@@ -63,7 +64,33 @@ export default function Nav({
   useEffect(() => {
     const active = navRef.current?.querySelector<HTMLElement>('.navlinks .active');
     active?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+    setSheet(false);
   }, [page]);
+
+  // Arrow keys move within an open panel, and from a group button into it.
+  const focusItem = (panel: HTMLElement | null, to: 'first' | 'last' | 'next' | 'prev') => {
+    const items = Array.from(panel?.querySelectorAll<HTMLButtonElement>('.mega-grid button') ?? []);
+    if (!items.length) return;
+    const i = items.indexOf(document.activeElement as HTMLButtonElement);
+    const n = to === 'first' ? 0 : to === 'last' ? items.length - 1 : to === 'next' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+    items[n].focus();
+  };
+  const onPanelKey = (e: React.KeyboardEvent<HTMLElement>) => {
+    const map: Record<string, 'first' | 'last' | 'next' | 'prev'> = { ArrowDown: 'next', ArrowRight: 'next', ArrowUp: 'prev', ArrowLeft: 'prev', Home: 'first', End: 'last' };
+    const to = map[e.key];
+    if (!to) return;
+    e.preventDefault();
+    focusItem(e.currentTarget, to);
+  };
+  const onTriggerKey = (e: React.KeyboardEvent<HTMLButtonElement>, label: string) => {
+    if (e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    clearTimers();
+    setOpenGroup(label);
+    // The panel is rendered but hidden until open; focus once it is visible.
+    const panel = e.currentTarget.parentElement?.querySelector<HTMLElement>('.mega-panel') ?? null;
+    requestAnimationFrame(() => focusItem(panel, 'first'));
+  };
 
   useEffect(() => {
     if (!openGroup) return;
@@ -89,11 +116,22 @@ export default function Nav({
   const chipTone = pulse && pulse.severity_total > 0.5 ? 'critical' : gaps > 0 ? 'warning' : '';
 
   return (
-    <nav className="nav" aria-label="Global" ref={navRef}>
+    <nav className={`nav${sheet ? ' sheet-open' : ''}`} aria-label="Global" ref={navRef}>
       <div className="nav-inner">
         <button type="button" className="brand" onClick={() => setPage(tenant ? 'servicelevels' : 'overview')} aria-label="Zyntra home">
           <img src="/zyvor-logomark.svg" alt="" className="brand-mark" aria-hidden />
           Zyntra
+        </button>
+        <button
+          type="button"
+          className="theme-toggle nav-menu-btn"
+          aria-label={sheet ? 'Close menu' : 'Open menu'}
+          aria-expanded={sheet}
+          onClick={() => setSheet((v) => !v)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+            {sheet ? <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" /> : <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />}
+          </svg>
         </button>
         <div className="navlinks">
           {visibleGroups(ontology, tenant).map((g) =>
@@ -108,6 +146,7 @@ export default function Nav({
                   aria-haspopup="true"
                   aria-expanded={openGroup === g.label}
                   onClick={() => toggleGroup(g.label)}
+                  onKeyDown={(e) => onTriggerKey(e, g.label)}
                 >
                   {g.label}
                   {g.label === 'Act' && pending > 0 ? <span className="nav-badge">{pending}</span> : null}
@@ -118,6 +157,7 @@ export default function Nav({
                   aria-label={g.label}
                   onMouseEnter={() => scheduleOpen(g.label)}
                   onMouseLeave={scheduleClose}
+                  onKeyDown={onPanelKey}
                 >
                   <div className="mega-grid">
                     {g.children.map((c) => (
@@ -152,6 +192,18 @@ export default function Nav({
           )}
         </div>
         <div className="nav-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-label="Search pages and objects"
+            title="Search (Ctrl-K)"
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="M16 16l4.5 4.5" strokeLinecap="round" />
+            </svg>
+          </button>
           {packs && packs.length > 1 ? (
             <select
               className="pack-select"

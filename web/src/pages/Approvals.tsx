@@ -4,7 +4,7 @@ import { ago, api, can, fmt, sev, until, renderLabel, type Precedents, type Prop
 import { useApi } from '../hooks';
 import { openDecision, openObject } from '../nav';
 import { useWho } from '../session';
-import { Card, Empty, ErrorNote, PageHero, Pill, riskTone } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, riskTone, TableScroll } from '../components/ui';
 import { phaseTone } from './Decision';
 
 function PrecedentLine({ id }: { id: string }) {
@@ -93,7 +93,8 @@ export default function Approvals() {
           </>
         }
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error} onRetry={reload} />
+      {!data && !error ? <PageSkeleton /> : null}
       {data ? (
         <div className="banner">
           <ShieldCheck size={18} aria-hidden />
@@ -245,7 +246,7 @@ export default function Approvals() {
             <PrecedentLine id={p.id} />
 
             {Object.keys(p.predicted.kpis).length ? (
-              <table className="table compact">
+              <TableScroll><table className="table compact"><caption className="sr-only">Predicted KPI effects</caption>
                 <thead>
                   <tr>
                     <th>KPI</th>
@@ -264,7 +265,7 @@ export default function Approvals() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></TableScroll>
             ) : null}
 
             {p.render ? (

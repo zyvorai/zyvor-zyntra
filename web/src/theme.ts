@@ -9,6 +9,12 @@ export function readStoredTheme(): Theme {
   } catch {
     /* ignore */
   }
+  // No stored choice: follow the system setting.
+  try {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  } catch {
+    /* ignore */
+  }
   return 'light';
 }
 

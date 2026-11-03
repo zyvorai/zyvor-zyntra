@@ -11,7 +11,7 @@
       (function () {
         try {
           var t = localStorage.getItem('zyntra-theme');
-          if (t !== 'dark' && t !== 'light') t = 'light';
+          if (t !== 'dark' && t !== 'light') t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', t);
           var m = document.querySelector('meta[name="theme-color"]');
           if (m) m.setAttribute('content', t === 'dark' ? '#000000' : '#ffffff');

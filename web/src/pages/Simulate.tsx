@@ -89,7 +89,7 @@ export default function Simulate() {
             {busy ? 'Simulating…' : 'Simulate'}
           </button>
         </div>
-        <ErrorNote message={error || graph.error} />
+        <ErrorNote message={error || graph.error} onRetry={graph.error ? graph.reload : undefined} />
       </Card>
       {result ? (
         <Card title={result.action_name}>

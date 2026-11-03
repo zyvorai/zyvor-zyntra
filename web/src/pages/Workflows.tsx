@@ -3,7 +3,7 @@ import { api, type OntSchema, type OntViewRow, type OntViewSpec, type Proposal }
 import { useApi } from '../hooks';
 import { display } from '../format';
 import { openObject } from '../nav';
-import { Card, Empty, ErrorNote, PageHero, Pill, Stat } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, Stat, TableScroll } from '../components/ui';
 
 type Page = import('../nav').Page;
 
@@ -41,7 +41,8 @@ export default function Workflows({ setPage }: { setPage?: (p: Page) => void }) 
         tint="amber"
         lede="Which business objects sit behind a failing KPI, and the typed actions you can propose for them. Every action still needs approval and runs dry by default."
       />
-      <ErrorNote message={schema.error || view.error || err} />
+      <ErrorNote message={schema.error || view.error || err} onRetry={() => { schema.reload(); view.reload(); }} />
+      {!schema.data && !schema.error ? <PageSkeleton /> : null}
       {note ? (
         <p className="info-note">
           {note}{' '}
@@ -74,7 +75,7 @@ export default function Workflows({ setPage }: { setPage?: (p: Page) => void }) 
         {view.data && rows.length === 0 ? (
           <Empty>No objects in this view.</Empty>
         ) : (
-          <table className="table">
+          <TableScroll><table className="table"><caption className="sr-only">Objects in this workflow</caption>
             <thead>
               <tr>
                 <th>Object</th>
@@ -112,7 +113,7 @@ export default function Workflows({ setPage }: { setPage?: (p: Page) => void }) 
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></TableScroll>
         )}
       </Card>
     </>
