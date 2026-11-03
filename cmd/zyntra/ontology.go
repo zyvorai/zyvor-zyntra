@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"io"
@@ -14,6 +15,8 @@ import (
 	"strings"
 	"text/tabwriter"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/zyvorai/zyntra/internal/actions"
 	"github.com/zyvorai/zyntra/internal/adapters"
@@ -96,13 +99,21 @@ func memoryOntology(c *common, m *graph.Model) (*ontology.Definition, *ontology.
 
 func ontologyCmd(ctx context.Context, c *common, fs *flag.FlagSet, args []string, out io.Writer) error {
 	if len(args) == 0 {
-		return fmt.Errorf("ontology: want validate, dump or impact")
+		return fmt.Errorf("ontology: want validate, dump, impact, migrate or suggest")
 	}
 	sub := args[0]
 	from := fs.String("from", "", "migrate: source store (ontology.json or .db)")
 	to := fs.String("to", "", "migrate: destination store (a new .db or .json file)")
+	driver := fs.String("driver", "", "suggest: postgres or sqlite")
+	dsnEnv := fs.String("dsn-env", "", "suggest: environment variable holding the database connection string")
+	ns := fs.String("namespace", "db", "suggest: namespace for the drafted objects")
+	dbSchema := fs.String("schema", "public", "suggest: postgres schema to read")
+	outFile := fs.String("o", "", "suggest: write the draft to this new file instead of stdout")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
+	}
+	if sub == "suggest" {
+		return ontologySuggest(ctx, *driver, *dsnEnv, *ns, *dbSchema, *outFile, out)
 	}
 	m, err := c.load(ctx)
 	if err != nil {
@@ -165,6 +176,62 @@ func ontologyCmd(ctx context.Context, c *common, fs *flag.FlagSet, args []string
 	}
 	return nil
 }
+
+// ontologySuggest reads a database's schema and drafts an ontology.yaml for a
+// person to review. It only reads metadata, never row data, and never
+// overwrites a file: -o names a new file, otherwise the draft goes to stdout.
+func ontologySuggest(ctx context.Context, driver, dsnEnv, ns, dbSchema, outFile string, out io.Writer) error {
+	if (driver != "postgres" && driver != "sqlite") || dsnEnv == "" {
+		return fmt.Errorf("ontology suggest -driver postgres|sqlite -dsn-env VAR [-namespace NS] [-schema S] [-o FILE]")
+	}
+	dsn := os.Getenv(dsnEnv)
+	if dsn == "" {
+		return fmt.Errorf("ontology suggest: %s is empty; the connection string comes from the environment", dsnEnv)
+	}
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		return fmt.Errorf("ontology suggest: open: %s", redact(err.Error(), dsn))
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	tables, err := connector.Introspect(ctx, db, driver, dbSchema)
+	if err != nil {
+		return fmt.Errorf("ontology suggest: %s", redact(err.Error(), dsn))
+	}
+	def, notes, err := ontology.Suggest(tables, ontology.SuggestOptions{Driver: driver, DSNEnv: dsnEnv, Namespace: ns})
+	for _, n := range notes {
+		fmt.Fprintln(os.Stderr, "note:", n)
+	}
+	if err != nil {
+		return err
+	}
+	body, err := yaml.Marshal(def)
+	if err != nil {
+		return err
+	}
+	hdr := "# Drafted by `zyntra ontology suggest` from the database schema. Review before use:\n" +
+		"# add kpis to objects, check property types, and decide which columns are sensitive.\n"
+	if outFile == "" {
+		_, err = fmt.Fprint(out, hdr+string(body))
+		return err
+	}
+	f, err := os.OpenFile(outFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return fmt.Errorf("ontology suggest: %w (it never overwrites an existing file)", err)
+	}
+	if _, err := f.WriteString(hdr + string(body)); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "wrote %s: %d object types, %d link types, %d connectors\n", outFile, len(def.Objects), len(def.Links), len(def.Connectors))
+	return nil
+}
+
+// redact keeps a connection string out of an error message.
+func redact(msg, dsn string) string { return strings.ReplaceAll(msg, dsn, "[dsn]") }
 
 func countLinks(st *ontology.Store) int {
 	n := 0
