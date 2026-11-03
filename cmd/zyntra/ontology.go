@@ -108,7 +108,7 @@ func ontologyCmd(ctx context.Context, c *common, fs *flag.FlagSet, args []string
 	dsnEnv := fs.String("dsn-env", "", "suggest: environment variable holding the database connection string")
 	ns := fs.String("namespace", "db", "suggest: namespace for the drafted objects")
 	dbSchema := fs.String("schema", "public", "suggest: postgres schema to read")
-	outFile := fs.String("o", "", "suggest: write the draft to this new file instead of stdout")
+	outFile := fs.String("out", "", "suggest: write the draft to this new file instead of stdout")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -179,10 +179,10 @@ func ontologyCmd(ctx context.Context, c *common, fs *flag.FlagSet, args []string
 
 // ontologySuggest reads a database's schema and drafts an ontology.yaml for a
 // person to review. It only reads metadata, never row data, and never
-// overwrites a file: -o names a new file, otherwise the draft goes to stdout.
+// overwrites a file: -out names a new file, otherwise the draft goes to stdout.
 func ontologySuggest(ctx context.Context, driver, dsnEnv, ns, dbSchema, outFile string, out io.Writer) error {
 	if (driver != "postgres" && driver != "sqlite") || dsnEnv == "" {
-		return fmt.Errorf("ontology suggest -driver postgres|sqlite -dsn-env VAR [-namespace NS] [-schema S] [-o FILE]")
+		return fmt.Errorf("ontology suggest -driver postgres|sqlite -dsn-env VAR [-namespace NS] [-schema S] [-out FILE]")
 	}
 	dsn := os.Getenv(dsnEnv)
 	if dsn == "" {
