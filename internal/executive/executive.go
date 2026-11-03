@@ -84,35 +84,35 @@ type Inbox struct {
 
 // InboxItem is one decision, not a dashboard tile.
 type InboxItem struct {
-	ID         string   `json:"id"`
-	Question   string   `json:"question"`
-	Owner      string   `json:"owner"`
-	Audience   []string `json:"audience"`
-	Due        string   `json:"due,omitempty"`
-	Rank       int      `json:"rank"`
-	Severity   float64  `json:"severity"`
-	Why        string   `json:"why"`
-	Evidence   []string `json:"evidence"`
-	Stale      []string `json:"stale,omitempty"`
-	Blocked    bool     `json:"blocked,omitempty"`
-	NextStep   string   `json:"next_step"`
+	ID       string   `json:"id"`
+	Question string   `json:"question"`
+	Owner    string   `json:"owner"`
+	Audience []string `json:"audience"`
+	Due      string   `json:"due,omitempty"`
+	Rank     int      `json:"rank"`
+	Severity float64  `json:"severity"`
+	Why      string   `json:"why"`
+	Evidence []string `json:"evidence"`
+	Stale    []string `json:"stale,omitempty"`
+	Blocked  bool     `json:"blocked,omitempty"`
+	NextStep string   `json:"next_step"`
 }
 
 // Brief is what an executive opens. Options include postpone and do nothing
 // when those actions exist.
 type Brief struct {
-	ID          string       `json:"id"`
-	Question    string       `json:"question"`
-	Owner       string       `json:"owner"`
-	Due         string       `json:"due,omitempty"`
-	Audience    []string     `json:"audience"`
-	Why         string       `json:"why,omitempty"`
-	Evidence    []Evidence   `json:"evidence"`
-	Options     []Option     `json:"options"`
-	Uncertainty []string     `json:"uncertainty"`
-	Conflicts   []Conflict   `json:"conflicts,omitempty"`
-	NextStep    NextStep     `json:"next_step"`
-	Narrative   string       `json:"narrative"`
+	ID          string     `json:"id"`
+	Question    string     `json:"question"`
+	Owner       string     `json:"owner"`
+	Due         string     `json:"due,omitempty"`
+	Audience    []string   `json:"audience"`
+	Why         string     `json:"why,omitempty"`
+	Evidence    []Evidence `json:"evidence"`
+	Options     []Option   `json:"options"`
+	Uncertainty []string   `json:"uncertainty"`
+	Conflicts   []Conflict `json:"conflicts,omitempty"`
+	NextStep    NextStep   `json:"next_step"`
+	Narrative   string     `json:"narrative"`
 }
 
 // Evidence is a KPI or a stated constraint, with source and freshness.
@@ -157,23 +157,23 @@ type NextStep struct {
 // Conflict is two plans that push the same KPI in opposite directions, or a
 // demand action whose downstream capacity KPI is already off target.
 type Conflict struct {
-	KPI      string   `json:"kpi"`
-	Name     string   `json:"name"`
-	Actions  []string `json:"actions"`
-	Owners   []string `json:"owners"`
-	Kind     string   `json:"kind"`
-	Summary  string   `json:"summary"`
+	KPI     string   `json:"kpi"`
+	Name    string   `json:"name"`
+	Actions []string `json:"actions"`
+	Owners  []string `json:"owners"`
+	Kind    string   `json:"kind"`
+	Summary string   `json:"summary"`
 }
 
 // Sensitivity is what happens to one action when an assumption is turned off.
 type Sensitivity struct {
-	Assumption  string  `json:"assumption"`
-	Statement   string  `json:"statement"`
-	Before      float64 `json:"improvement_before"`
-	After       float64 `json:"improvement_after"`
-	Flips       bool    `json:"flips"`
-	Was         string  `json:"top_before,omitempty"`
-	Now         string  `json:"top_after,omitempty"`
+	Assumption string  `json:"assumption"`
+	Statement  string  `json:"statement"`
+	Before     float64 `json:"improvement_before"`
+	After      float64 `json:"improvement_after"`
+	Flips      bool    `json:"flips"`
+	Was        string  `json:"top_before,omitempty"`
+	Now        string  `json:"top_after,omitempty"`
 }
 
 // Review is a 30, 60, or 90 day look at a recorded decision.
@@ -199,14 +199,14 @@ type Digest struct {
 
 // Input is everything the brief is allowed to see.
 type Input struct {
-	Model    *graph.Model
-	Plan     planner.Result
-	Gaps     []gaps.Gap
-	Fresh    []freshness.State
-	Overlay  Overlay
+	Model     *graph.Model
+	Plan      planner.Result
+	Gaps      []gaps.Gap
+	Fresh     []freshness.State
+	Overlay   Overlay
 	Proposals []approvals.Proposal
-	Now      time.Time
-	Audience string
+	Now       time.Time
+	Audience  string
 }
 
 // BuildInbox returns the decisions for an audience, highest severity first.
@@ -253,8 +253,8 @@ func BuildBrief(in Input, id string) Brief {
 	b := Brief{
 		ID: spec.ID, Question: spec.Question, Owner: spec.Owner, Due: spec.Due,
 		Audience: spec.Audience, Why: spec.Why,
-		Evidence: evidence(in),
-		Options:  options(in, spec),
+		Evidence:  evidence(in),
+		Options:   options(in, spec),
 		Conflicts: Conflicts(in),
 	}
 	if len(b.Audience) == 0 {
@@ -337,8 +337,8 @@ func Conflicts(in Input) []Conflict {
 					k, _ := in.Model.KPI(g.KPI)
 					out = append(out, Conflict{
 						KPI: g.KPI, Name: k.Name, Actions: []string{rec.Action},
-						Owners: unique([]string{g.Owner, ownerOf(in.Model, rec.Action)}),
-						Kind: "capacity",
+						Owners:  unique([]string{g.Owner, ownerOf(in.Model, rec.Action)}),
+						Kind:    "capacity",
 						Summary: fmt.Sprintf("%s is blocked: %s", rec.Name, reason),
 					})
 				}
@@ -498,7 +498,7 @@ func decisionsFor(in Input, aud string, stale map[string]bool) []InboxItem {
 	return []InboxItem{{
 		ID: "weekly-review", Question: questionFrom(in), Owner: ownerFrom(in),
 		Audience: []string{aud}, Severity: totalSeverity(in.Gaps),
-		Why: "Ranked from the KPI gaps and the current plan.",
+		Why:      "Ranked from the KPI gaps and the current plan.",
 		Evidence: gapIDs(in.Gaps), NextStep: "Open the brief and compare options, including do nothing.",
 	}}
 }

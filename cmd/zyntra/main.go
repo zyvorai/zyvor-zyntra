@@ -508,7 +508,7 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		Executor: &executor.Executor{Mode: mode, Run: kubeRunner(c.kubeconfig),
 			OutDir: env("ZYNTRA_OUTPUT_DIR", filepath.Join(stateDir, "out"))},
 		StateDir: stateDir, Version: version, Host: env("ZYNTRA_HOST", hostname()),
-		PackDir: packDirOf(c.file),
+		PackDir:            packDirOf(c.file),
 		ApprovalMode:       env("ZYNTRA_APPROVAL_MODE", api.ModeLocal),
 		KeepDoubleApproval: envBool("ZYNTRA_KEEP_DOUBLE_APPROVAL"),
 	}
