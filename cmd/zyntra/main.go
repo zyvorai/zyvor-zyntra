@@ -74,7 +74,7 @@ Usage:
                                           ZYNTRA_AI_* model when set; prints otherwise)
   zyntra ontology validate|dump|impact -f PACK [ID]
   zyntra ontology migrate -f PACK -from ontology.json -to ontology.db
-  zyntra ontology suggest -driver postgres|sqlite -dsn-env VAR [-o ontology.yaml]
+  zyntra ontology suggest -driver postgres|sqlite -dsn-env VAR [-out ontology.yaml]
                                           draft an ontology.yaml from a database schema
                                           business objects from the pack's ontology.yaml
   zyntra scenario run|compare -f PACK [-set kpi=v] [name=]a+b ...
