@@ -3,7 +3,13 @@
 #
 # This pack reads one HTTP endpoint: Machina's Prometheus scrape. Atlas is read
 # through Machina (machina_atlas_* gauges), so Zyntra needs no Atlas credentials.
-variables: []
+variables:
+  - name: ZYNTRA_MACHINA_URL
+    description: Machina controller base URL (Atlas is read through Machina)
+    example: http://10.0.0.5:5093
+  - name: ZYNTRA_MACHINA_TOKEN
+    description: Operator-role Machina API key (/api/v1/api-keys)
+    example: machina-operator-key
 files: []
 # Set on the Zyntra host:
 #   ZYNTRA_MACHINA_URL     Machina controller, e.g. http://10.0.0.5:5093
