@@ -5,7 +5,7 @@ import { useApi } from '../hooks';
 import { useWho } from '../session';
 import { decisionFromHash, openDecision } from '../nav';
 import SimResultView from '../components/SimResultView';
-import { Card, Empty, ErrorNote, PageHero, Pill, riskTone } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, riskTone, TableScroll } from '../components/ui';
 
 interface DecisionResponse {
   decision: Proposal;
@@ -85,7 +85,7 @@ function RolloutPanel({ id }: { id: string }) {
             {ro.current === st.name ? <span className="muted small"> · may run now</span> : null}
             <div className="small">
               {st.sites.map((site) => (
-                <span key={site} className="mono" style={{ marginRight: 12 }}>
+                <span key={site} className="mono site-tag">
                   {site}: {st.reports?.[site]?.state ?? '—'}
                 </span>
               ))}
@@ -122,7 +122,7 @@ export default function Decision() {
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, []);
-  const { data, error } = useApi<DecisionResponse>(id ? `/api/v1/decisions/${encodeURIComponent(id)}` : null, 5000);
+  const { data, error, reload } = useApi<DecisionResponse>(id ? `/api/v1/decisions/${encodeURIComponent(id)}` : null, 5000);
   const p = data?.decision;
   const decided = !!p?.outcome && p.outcome.state !== 'observing';
   const { data: why } = useApi<ExplanationResponse>(decided && id ? `/api/v1/proposals/${encodeURIComponent(id)}/explanation` : null);
@@ -149,7 +149,8 @@ export default function Decision() {
           </>
         }
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error} onRetry={reload} />
+      {id && !data && !error ? <PageSkeleton stats={false} /> : null}
       {p ? (
         <>
           <div className="pills decision-pills">
@@ -230,7 +231,7 @@ export default function Decision() {
                             {rows.length ? `${rows[0].source} rows ${rows.map((r) => r.index).join(', ')}` : 'no rows matched'}
                           </span>
                           {rows.length ? (
-                            <table className="table compact">
+                            <TableScroll><table className="table compact"><caption className="sr-only">Per-site rollout results</caption>
                               <thead>
                                 <tr>
                                   <th>#</th>
@@ -251,7 +252,7 @@ export default function Decision() {
                                   </tr>
                                 ))}
                               </tbody>
-                            </table>
+                            </table></TableScroll>
                           ) : null}
                         </div>
                       ))}
@@ -344,7 +345,7 @@ export default function Decision() {
                 </p>
                 {p.outcome.reasons?.length ? <p className="small">{p.outcome.reasons.join('; ')}</p> : null}
                 {p.outcome.accuracy?.length ? (
-                  <table className="table compact">
+                  <TableScroll><table className="table compact"><caption className="sr-only">Predicted against actual</caption>
                     <thead>
                       <tr>
                         <th>KPI</th>
@@ -365,7 +366,7 @@ export default function Decision() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></TableScroll>
                 ) : null}
                 {why ? (
                   <div className="info-note small">
@@ -386,7 +387,7 @@ export default function Decision() {
                   </div>
                 ) : null}
                 {p.outcome.samples.length ? (
-                  <table className="table compact">
+                  <TableScroll><table className="table compact"><caption className="sr-only">Outcome samples</caption>
                     <thead>
                       <tr>
                         <th>Sample</th>
@@ -408,7 +409,7 @@ export default function Decision() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table></TableScroll>
                 ) : null}
               </Step>
             ) : null}
@@ -416,7 +417,7 @@ export default function Decision() {
 
           {data?.decision.rollout ? <RolloutPanel id={data.decision.id} /> : null}
           <Card title="Audit trail" aside={<Pill>{data?.audit?.length ?? 0} events</Pill>}>
-            <table className="table compact">
+            <TableScroll><table className="table compact"><caption className="sr-only">Recorded events</caption>
               <thead>
                 <tr>
                   <th>#</th>
@@ -458,7 +459,7 @@ export default function Decision() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></TableScroll>
           </Card>
         </>
       ) : null}

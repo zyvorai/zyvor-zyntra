@@ -1,10 +1,10 @@
 import { fmt, type TenantKPI } from '../api';
 import { useApi } from '../hooks';
-import { Card, Empty, ErrorNote, PageHero, Pill, Stat } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, Stat } from '../components/ui';
 
 /** A tenant's own service levels against their targets. */
 export default function ServiceLevels() {
-  const { data, error } = useApi<{ tenant: string; kpis: TenantKPI[] }>('/api/v1/tenant/kpis', 15000);
+  const { data, error, reload } = useApi<{ tenant: string; kpis: TenantKPI[] }>('/api/v1/tenant/kpis', 15000);
   const kpis = data?.kpis ?? [];
   const missing = kpis.filter((k) => !k.met).length;
   return (
@@ -15,7 +15,8 @@ export default function ServiceLevels() {
         tint="green"
         lede="Your service levels against their targets. Provider infrastructure is not shown; a degraded provider component appears only as a generic flag on the objects it affects."
       />
-      <ErrorNote message={error} />
+      <ErrorNote message={error} onRetry={reload} />
+      {!data && !error ? <PageSkeleton /> : null}
       <div className="stats">
         <Stat label="Service levels" value={data ? kpis.length : '—'} />
         <Stat label="Off target" value={data ? missing : '—'} tone={missing ? 'warn' : 'ok'} />

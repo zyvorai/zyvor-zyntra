@@ -1,7 +1,7 @@
 import { duration, fmt, pct, type AIStatus, type AnalyticsReport, type Anomaly, type CalibrationReport, type Forecast } from '../api';
 import { useApi } from '../hooks';
 import type { Page } from '../nav';
-import { Card, Empty, ErrorNote, PageHero, Pill } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, TableScroll } from '../components/ui';
 
 import KPIInvestigation from '../components/KPIInvestigation';
 import WatchInbox from '../components/WatchInbox';
@@ -20,7 +20,7 @@ function Calibration() {
       </p>
       {data.note ? <Empty>{data.note}</Empty> : null}
       {data.kpis.length ? (
-        <table className="table compact">
+        <TableScroll><table className="table compact"><caption className="sr-only">Suggested edge corrections</caption>
           <thead>
             <tr>
               <th>KPI</th>
@@ -39,7 +39,7 @@ function Calibration() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></TableScroll>
       ) : null}
       {data.suggestions.map((s) => (
         <div key={s.kpi} className="info-note">
@@ -81,7 +81,8 @@ export default function Insights({ setPage }: { setPage: (p: Page) => void }) {
           </button>
         }
       />
-      <ErrorNote message={ins.error} />
+      <ErrorNote message={ins.error} onRetry={ins.reload} />
+      {!ins.data && !ins.error ? <PageSkeleton stats={false} /> : null}
       {st.data ? (
         <p className="muted small">
           AI mode <strong>{st.data.mode}</strong>
@@ -153,12 +154,12 @@ function Analytics({ data }: { data: AnalyticsReport }) {
     <strong>{k.name || k.kpi}</strong> · {k.observations} observations · {k.hourly_samples} consecutive hourly samples
     {k.status !== 'ready' ? <p className="muted small">{k.reason}</p> : <>
      <p>Selected model: <strong>{k.selected}</strong></p>
-     <table className="table compact"><caption>Forecast accuracy for {k.name || k.kpi}</caption><thead><tr><th>Model</th><th className="num">MAE</th><th className="num">RMSE</th><th className="num">Origins</th></tr></thead><tbody>
+     <TableScroll><table className="table compact"><caption>Forecast accuracy for {k.name || k.kpi}</caption><thead><tr><th>Model</th><th className="num">MAE</th><th className="num">RMSE</th><th className="num">Origins</th></tr></thead><tbody>
       {k.backtests.map(b => <tr key={b.method}><td>{b.method}</td><td className="num">{fmt(b.mae)}</td><td className="num">{fmt(b.rmse)}</td><td className="num">{b.samples}</td></tr>)}
-     </tbody></table>
-     <table className="table compact"><caption>Projections for {k.name || k.kpi}</caption><thead><tr><th>Horizon</th><th className="num">Value ({k.unit})</th><th className="num">Empirical band</th><th>Target</th></tr></thead><tbody>
+     </tbody></table></TableScroll>
+     <TableScroll><table className="table compact"><caption>Projections for {k.name || k.kpi}</caption><thead><tr><th>Horizon</th><th className="num">Value ({k.unit})</th><th className="num">Empirical band</th><th>Target</th></tr></thead><tbody>
       {k.projections.map(p => <tr key={p.hours}><td>{p.hours}h</td><td className="num">{fmt(p.value)}</td><td className="num">{fmt(p.low)} – {fmt(p.high)}</td><td><Pill tone={p.breach ? 'warn' : 'neutral'}>{p.breach ? 'Projected miss' : 'No projected miss'}</Pill></td></tr>)}
-     </tbody></table>
+     </tbody></table></TableScroll>
     </>}
    </div>)}
   </Card>

@@ -241,7 +241,7 @@ export default function Login({ meta, onSignedIn }: { meta: Meta | null; onSigne
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 className="login-input"
-                style={{ paddingRight: '2.75rem' }}
+                data-padded
                 placeholder={secretLabel}
                 autoComplete="current-password"
                 ref={focusInPlace}
