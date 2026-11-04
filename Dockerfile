@@ -15,7 +15,7 @@ COPY web ./
 RUN npm run build
 
 FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
-ARG VERSION=0.4.0
+ARG VERSION=0.5.0-dev
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
@@ -33,7 +33,7 @@ RUN export CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
  && mkdir -p /out/state/out /out/inbox
 
 FROM gcr.io/distroless/static-debian12:nonroot
-ARG VERSION=0.4.0
+ARG VERSION=0.5.0-dev
 LABEL org.opencontainers.image.title="zyntra" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.vendor="Zyvor AI Labs" \
