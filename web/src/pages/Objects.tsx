@@ -293,7 +293,35 @@ function useObjectPages(type: string, q: string) {
   return { items, hasMore: next !== '', loaded, busy, error, more };
 }
 
-export default function Objects() {
+const OBJECTS_LEDE =
+  'The business objects Zyntra knows about, how they link, and where each fact came from. Links show what depends on what; they never feed the simulator.';
+
+/** A pack without an ontology has nothing to list; say so once instead of failing five requests. */
+function NoOntology() {
+  return (
+    <>
+      <PageHero eyebrow="Business" title="Objects" tint="purple" lede={OBJECTS_LEDE} />
+      <Card>
+        <Empty
+          action={
+            <p className="muted small">
+              Add an <code>ontology.yaml</code> to the pack, or draft one from a database with <code>zyntra ontology suggest</code>.
+            </p>
+          }
+        >
+          This pack has no ontology, so there are no business objects to show.
+        </Empty>
+      </Card>
+    </>
+  );
+}
+
+/** `ontology` comes from the pack's meta; while it is still unknown the page renders as before. */
+export default function Objects({ ontology }: { ontology?: boolean }) {
+  return ontology === false ? <NoOntology /> : <ObjectsBody />;
+}
+
+function ObjectsBody() {
   const schema = useApi<OntSchema>('/api/v1/ontology/schema');
   const [type, setType] = useState('');
   const [q, setQ] = useState('');
@@ -306,13 +334,16 @@ export default function Objects() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
 
+  // The pack's meta may not have arrived yet; the server's own answer settles it.
+  if (/no ontology/i.test(schema.error)) return <NoOntology />;
+
   return (
     <>
       <PageHero
         eyebrow="Business"
         title="Objects"
         tint="purple"
-        lede="The business objects Zyntra knows about, how they link, and where each fact came from. Links show what depends on what; they never feed the simulator."
+        lede={OBJECTS_LEDE}
       />
       <ErrorNote message={schema.error} />
       <Capacity />

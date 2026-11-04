@@ -109,7 +109,7 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
           {page === 'insights' && <Insights setPage={setPage} />}
           {page === 'ask' && <Ask />}
           {page === 'model' && <ModelPage />}
-          {page === 'objects' && <Objects />}
+          {page === 'objects' && <Objects ontology={meta?.ontology} />}
           {page === 'workflows' && <Workflows setPage={setPage} />}
           {page === 'scenarios' && <Scenarios />}
           {page === 'servicelevels' && <ServiceLevels />}
