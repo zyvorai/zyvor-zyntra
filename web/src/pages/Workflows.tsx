@@ -4,10 +4,20 @@ import { useApi } from '../hooks';
 import { display } from '../format';
 import { openObject } from '../nav';
 import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, Stat, TableScroll } from '../components/ui';
+import NoOntology from '../components/NoOntology';
 
 type Page = import('../nav').Page;
 
-export default function Workflows({ setPage }: { setPage?: (p: Page) => void }) {
+const WORKFLOWS_LEDE =
+  'Which business objects sit behind a failing KPI, and the typed actions you can propose for them. Every action still needs approval and runs dry by default.';
+const noOntologyPage = <NoOntology eyebrow="Business" title="Workflows" tint="amber" lede={WORKFLOWS_LEDE} what="workflows" />;
+
+/** `ontology` comes from the pack's meta; while it is unknown the page asks the server as before. */
+export default function Workflows({ setPage, ontology }: { setPage?: (p: Page) => void; ontology?: boolean }) {
+  return ontology === false ? noOntologyPage : <WorkflowsBody setPage={setPage} />;
+}
+
+function WorkflowsBody({ setPage }: { setPage?: (p: Page) => void }) {
   const schema = useApi<OntSchema>('/api/v1/ontology/schema');
   const views = schema.data?.views ?? [];
   const [sel, setSel] = useState('');
@@ -33,14 +43,12 @@ export default function Workflows({ setPage }: { setPage?: (p: Page) => void }) 
     }
   };
 
+  // The pack's meta may not have arrived yet; the server's own answer settles it.
+  if (/no ontology/i.test(schema.error)) return noOntologyPage;
+
   return (
     <>
-      <PageHero
-        eyebrow="Business"
-        title="Workflows"
-        tint="amber"
-        lede="Which business objects sit behind a failing KPI, and the typed actions you can propose for them. Every action still needs approval and runs dry by default."
-      />
+      <PageHero eyebrow="Business" title="Workflows" tint="amber" lede={WORKFLOWS_LEDE} />
       <ErrorNote message={schema.error || view.error || err} onRetry={() => { schema.reload(); view.reload(); }} />
       {!schema.data && !schema.error ? <PageSkeleton /> : null}
       {note ? (

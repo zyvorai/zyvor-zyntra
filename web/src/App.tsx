@@ -110,8 +110,8 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
           {page === 'ask' && <Ask />}
           {page === 'model' && <ModelPage />}
           {page === 'objects' && <Objects ontology={meta?.ontology} />}
-          {page === 'workflows' && <Workflows setPage={setPage} />}
-          {page === 'scenarios' && <Scenarios />}
+          {page === 'workflows' && <Workflows setPage={setPage} ontology={meta?.ontology} />}
+          {page === 'scenarios' && <Scenarios ontology={meta?.ontology} />}
           {page === 'servicelevels' && <ServiceLevels />}
           {page === 'decision' && <Decision />}
           {page === 'executive' && <Executive />}

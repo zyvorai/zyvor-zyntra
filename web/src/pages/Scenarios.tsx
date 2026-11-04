@@ -2,8 +2,21 @@ import { useState } from 'react';
 import { api, fmt, type Comparison, type Scenario } from '../api';
 import { useApi } from '../hooks';
 import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, TableScroll } from '../components/ui';
+import NoOntology from '../components/NoOntology';
 
-export default function Scenarios() {
+const SCENARIOS_LEDE =
+  'Save a plan with its assumptions, run it against the current model and data, and compare plans side by side. Running a scenario never changes anything.';
+
+/** `ontology` comes from the pack's meta; scenarios are served only for a pack that has one. */
+export default function Scenarios({ ontology }: { ontology?: boolean }) {
+  return ontology === false ? (
+    <NoOntology eyebrow="Business" title="Scenarios" tint="green" lede={SCENARIOS_LEDE} what="scenarios" />
+  ) : (
+    <ScenariosBody />
+  );
+}
+
+function ScenariosBody() {
   const list = useApi<{ scenarios: Scenario[] }>('/api/v1/scenarios');
   const graph = useApi<{ model: { actions: { id: string; name: string }[] } }>('/api/v1/graph');
   const [name, setName] = useState('');
@@ -60,7 +73,7 @@ export default function Scenarios() {
         eyebrow="Business"
         title="Scenarios"
         tint="green"
-        lede="Save a plan with its assumptions, run it against the current model and data, and compare plans side by side. Running a scenario never changes anything."
+        lede={SCENARIOS_LEDE}
       />
       <ErrorNote message={list.error || err} onRetry={list.error ? list.reload : undefined} />
       {!list.data && !list.error ? <PageSkeleton stats={false} /> : null}
