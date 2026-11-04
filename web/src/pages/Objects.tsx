@@ -312,10 +312,11 @@ function ObjectsBody() {
   const list = useObjectPages(type, q);
   // Hold the page body until the first schema and list answers are in, so it appears in one piece;
   // later searches and filters keep the body and show their own skeleton in the list.
-  const [ready, setReady] = useState(false);
+  const [seen, setSeen] = useState(false);
   const settled = !!(schema.data || schema.error) && (list.loaded || !!list.error);
+  const ready = seen || settled; // derived in the same render, so the body is never hidden once data is in
   useEffect(() => {
-    if (settled) setReady(true);
+    if (settled) setSeen(true);
   }, [settled]);
 
   useEffect(() => {
