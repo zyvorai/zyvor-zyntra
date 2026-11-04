@@ -224,6 +224,12 @@
   .list li > div { min-width: 0; overflow-wrap: anywhere; }
 }
 
+/* The pack switcher shows its long title; on a phone it must give way to the
+   icons beside it or the whole page scrolls sideways. */
+@media (max-width: 640px) {
+  .pack-select { max-width: 5rem; min-width: 0; text-overflow: ellipsis; }
+}
+
 /* —— Command palette —— */
 .palette-scrim {
   position: fixed;
