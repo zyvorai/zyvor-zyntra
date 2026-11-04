@@ -310,6 +310,13 @@ function ObjectsBody() {
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(objectFromHash());
   const list = useObjectPages(type, q);
+  // Hold the page body until the first schema and list answers are in, so it appears in one piece;
+  // later searches and filters keep the body and show their own skeleton in the list.
+  const [ready, setReady] = useState(false);
+  const settled = !!(schema.data || schema.error) && (list.loaded || !!list.error);
+  useEffect(() => {
+    if (settled) setReady(true);
+  }, [settled]);
 
   useEffect(() => {
     const on = () => setSel(objectFromHash());
@@ -329,6 +336,8 @@ function ObjectsBody() {
         lede={OBJECTS_LEDE}
       />
       <ErrorNote message={schema.error} onRetry={schema.reload} />
+      {!ready && !schema.error && !list.error ? <PageSkeleton stats={false} shape="split" rows={9} /> : null}
+      <div className="page-body" hidden={!ready && !schema.error && !list.error}>
       <Capacity />
       <Resolution />
       <Connectors />
@@ -368,6 +377,7 @@ function ObjectsBody() {
           ) : null}
         </Card>
         {sel ? <Detail id={sel} /> : <Card><Empty>Select an object to see its facts, links and dependents.</Empty></Card>}
+      </div>
       </div>
     </>
   );

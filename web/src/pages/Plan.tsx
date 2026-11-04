@@ -65,7 +65,7 @@ export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
         lede="Every action, and pairs that work together, simulated against live values. Ranked on the worst case: criticality-weighted improvement at the pessimistic end of every band, minus risk and stale-input penalties. Anything that would breach a hard constraint is listed separately. Nothing runs until a human approves it."
       />
       <ErrorNote message={error} onRetry={reload} />
-      {!data && !error ? <PageSkeleton /> : null}
+      {!data && !error ? <PageSkeleton stats={false} shape="cards" rows={3} /> : null}
       <div className="page-body" hidden={!data && !error}>
       <OwnerFilter owners={data?.owners} value={owner} onChange={setOwner} />
       {data?.unusable_inputs?.length ? (
