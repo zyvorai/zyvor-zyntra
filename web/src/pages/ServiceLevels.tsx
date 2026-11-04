@@ -1,6 +1,6 @@
 import { fmt, type TenantKPI } from '../api';
 import { useApi } from '../hooks';
-import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, Stat } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, Stat, TableScroll } from '../components/ui';
 
 /** A tenant's own service levels against their targets. */
 export default function ServiceLevels() {
@@ -25,6 +25,7 @@ export default function ServiceLevels() {
         {data && kpis.length === 0 ? (
           <Empty>No service levels are defined for your workspace yet.</Empty>
         ) : (
+          <TableScroll>
           <table className="table">
             <thead>
               <tr>
@@ -53,6 +54,7 @@ export default function ServiceLevels() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         )}
       </Card>
     </>

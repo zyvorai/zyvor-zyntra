@@ -216,6 +216,14 @@
   }
 }
 
+/* Rows made of a link plus a note stack on a phone instead of squeezing the
+   note into a sliver, and long identifiers wrap instead of being clipped. */
+.card p { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .list li:has(> .linklike) { flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+  .list li > div { min-width: 0; overflow-wrap: anywhere; }
+}
+
 /* —— Command palette —— */
 .palette-scrim {
   position: fixed;

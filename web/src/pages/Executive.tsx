@@ -188,7 +188,7 @@ export default function Executive() {
             <p>{brief.data.narrative}</p>
           </Card>
           <Card title="Options" aside={<span className="muted">including postpone and do nothing</span>}>
-            <TableScroll><table className="data"><caption className="sr-only">Decision options</caption>
+            <TableScroll><table className="table"><caption className="sr-only">Decision options</caption>
               <thead>
                 <tr>
                   <th>Option</th>
@@ -220,7 +220,7 @@ export default function Executive() {
           </Card>
           <div className="grid-2">
             <Card title="Evidence">
-              <TableScroll><table className="data"><caption className="sr-only">Evidence behind the brief</caption>
+              <TableScroll><table className="table"><caption className="sr-only">Evidence behind the brief</caption>
                 <thead>
                   <tr><th>KPI</th><th>Value</th><th>Target</th><th>Fresh</th></tr>
                 </thead>

@@ -1,5 +1,5 @@
 import { fmt, sev, type SimResult } from '../api';
-import { Pill } from './ui';
+import { Pill, TableScroll } from './ui';
 
 export default function SimResultView({ r }: { r: SimResult }) {
   const changed = r.kpis.filter((k) => k.change !== 0);
@@ -27,6 +27,7 @@ export default function SimResultView({ r }: { r: SimResult }) {
           </Pill>
         ))}
       </div>
+      <TableScroll>
       <table className="table compact">
         <thead>
           <tr>
@@ -67,6 +68,7 @@ export default function SimResultView({ r }: { r: SimResult }) {
           ))}
         </tbody>
       </table>
+      </TableScroll>
       {r.violations?.length ? (
         <div className="error-note">
           <strong>Breaks hard constraints:</strong>
