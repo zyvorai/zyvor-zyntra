@@ -123,9 +123,45 @@ export function PageSkeleton({ stats = true, rows = 4 }: { stats?: boolean; rows
   );
 }
 
-/** Wraps a table so it scrolls sideways on a phone and keeps its header in view. */
+/**
+ * Wraps a table so it scrolls sideways and keeps its header in view. On a phone
+ * (see story.css) each row becomes a labelled card; for that every cell is
+ * given its column's header text as data-label, and the table roles are written
+ * out so assistive tech still reads a table once the layout is no longer one.
+ */
 export function TableScroll({ children }: { children: ReactNode }) {
-  return <div className="table-scroll">{children}</div>;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const label = () => {
+      root.querySelectorAll('table').forEach((t) => {
+        t.setAttribute('role', 'table');
+        const heads = Array.from(t.querySelectorAll('thead th')).map((h) => (h.textContent ?? '').trim());
+        t.querySelectorAll('thead, tbody, tfoot').forEach((g) => g.setAttribute('role', 'rowgroup'));
+        t.querySelectorAll('tr').forEach((r) => {
+          r.setAttribute('role', 'row');
+          Array.from(r.children).forEach((c, i) => {
+            if (c.tagName === 'TH') c.setAttribute('role', 'columnheader');
+            else {
+              c.setAttribute('role', 'cell');
+              if (heads[i] && c.getAttribute('data-label') !== heads[i]) c.setAttribute('data-label', heads[i]);
+            }
+          });
+        });
+      });
+    };
+    label();
+    if (typeof MutationObserver === 'undefined') return;
+    const mo = new MutationObserver(label);
+    mo.observe(root, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
+  return (
+    <div className="table-scroll" ref={ref}>
+      {children}
+    </div>
+  );
 }
 
 /** Fades a block in once it scrolls into view; always visible without IntersectionObserver. */
