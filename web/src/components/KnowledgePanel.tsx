@@ -38,7 +38,7 @@ export default function KnowledgePanel() {
  };
  return <Card title="Document knowledge" aside={<Pill>{list.data?.documents.length ?? 0} visible sources</Pill>}>
   <p className="muted small">Add text or Markdown SOPs and runbooks, then choose Document knowledge when asking. Source text is evidence; it cannot execute actions.</p>
-  <ErrorNote message={list.error} />
+  <ErrorNote message={list.error} onRetry={list.reload} />
   {list.data?.documents.length === 0 ? <Empty>No documents are visible in this pack.</Empty> : null}
   <ul className="list">{list.data?.documents.map(d => <li key={d.id}><button className="linklike" onClick={() => open(d.id)}>{d.title}</button><span className="muted small">v{d.version} · {d.visibility}</span></li>)}</ul>
   {admin ? <button className="btn-secondary" onClick={() => {setDraft({...emptyDocument,roles:[]});setEditing(true);setRemoving(false);setNote('');}}>Add document</button> : null}

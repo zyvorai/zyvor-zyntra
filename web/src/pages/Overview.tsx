@@ -1,13 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ago, pct, type Answer, type Model, type Pulse } from '../api';
 import { useApi } from '../hooks';
 import type { Page } from '../nav';
-import { Card, Empty, Meter, PageHero, Pill, Stat, riskTone } from '../components/ui';
+import { Card, Empty, ErrorNote, Meter, PageHero, PageSkeleton, Pill, Stat, riskTone } from '../components/ui';
 
 export default function Overview({ pulse, setPage }: { pulse: Pulse | null; setPage: (p: Page) => void }) {
   const [owner, setOwner] = useState('');
   const [win, setWin] = useState('');
+  // The first pulse arrives over the live feed; if it does not, say so rather than loading forever.
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    if (pulse) return setStalled(false);
+    const t = setTimeout(() => setStalled(true), 8000);
+    return () => clearTimeout(t);
+  }, [pulse]);
   const graph = useApi<{ model: Model }>('/api/v1/graph', 60000);
   const owners = graph.data?.model.pack?.owners ?? [];
   const windows = Object.keys(graph.data?.model.calendars ?? {});
@@ -25,10 +32,14 @@ export default function Overview({ pulse, setPage }: { pulse: Pulse | null; setP
       <PageHero
         size="display"
         eyebrow="Decision intelligence"
-        title={gaps.length ? `${gaps.length} KPI${gaps.length === 1 ? '' : 's'} off target` : 'Every KPI on target'}
+        title={!pulse ? 'Overview' : gaps.length ? `${gaps.length} KPI${gaps.length === 1 ? '' : 's'} off target` : 'Every KPI on target'}
         lede="Live signals from Netra eBPF, Gravia and Fabric, propagated through your KPI graph into ranked, human-approved actions."
       />
 
+      {!pulse && stalled ? <ErrorNote message="Live updates aren't connecting. Check your connection, then retry." onRetry={() => window.location.reload()} /> : null}
+      {!pulse ? <PageSkeleton /> : null}
+      {pulse ? (
+      <>
       <div className="stats">
         <Stat
           label="Total severity"
@@ -81,7 +92,7 @@ export default function Overview({ pulse, setPage }: { pulse: Pulse | null; setP
             ) : null}
           </div>
         ) : null}
-        {digest.data ? <p className="prose">{digest.data.text}</p> : <Empty>{digest.error || 'Summarising…'}</Empty>}
+        {digest.data ? <p className="prose">{digest.data.text}</p> : digest.error ? <ErrorNote message={digest.error} onRetry={digest.reload} /> : <Empty>Summarising…</Empty>}
         <div className="row-actions">
           <button className="btn-diag" onClick={() => setPage('ask')}>
             Ask a follow-up
@@ -149,6 +160,8 @@ export default function Overview({ pulse, setPage }: { pulse: Pulse | null; setP
           </div>
         )}
       </Card>
+      </>
+      ) : null}
     </>
   );
 }

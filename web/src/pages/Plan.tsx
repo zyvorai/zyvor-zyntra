@@ -66,6 +66,7 @@ export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
       />
       <ErrorNote message={error} onRetry={reload} />
       {!data && !error ? <PageSkeleton /> : null}
+      <div className="page-body" hidden={!data && !error}>
       <OwnerFilter owners={data?.owners} value={owner} onChange={setOwner} />
       {data?.unusable_inputs?.length ? (
         <p className="info-note">
@@ -180,6 +181,7 @@ export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
           </TableScroll>
         </Card>
       ) : null}
+      </div>
     </>
   );
 }

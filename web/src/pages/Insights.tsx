@@ -83,6 +83,8 @@ export default function Insights({ setPage }: { setPage: (p: Page) => void }) {
       />
       <ErrorNote message={ins.error} onRetry={ins.reload} />
       {!ins.data && !ins.error ? <PageSkeleton stats={false} /> : null}
+      {ins.data ? (
+      <>
       {st.data ? (
         <p className="muted small">
           AI mode <strong>{st.data.mode}</strong>
@@ -134,6 +136,8 @@ export default function Insights({ setPage }: { setPage: (p: Page) => void }) {
       <WatchInbox />
       <KPIInvestigation />
       <Calibration />
+      </>
+      ) : null}
     </>
   );
 }

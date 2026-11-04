@@ -77,6 +77,7 @@ function ScenariosBody() {
       />
       <ErrorNote message={list.error || err} onRetry={list.error ? list.reload : undefined} />
       {!list.data && !list.error ? <PageSkeleton stats={false} /> : null}
+      <div className="page-body" hidden={!list.data && !list.error}>
       <Card title="New scenario">
         <div className="form-grid">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name, e.g. Add GPUs and reroute" maxLength={80} aria-label="Scenario name" />
@@ -197,6 +198,7 @@ function ScenariosBody() {
           </table></TableScroll>
         </Card>
       ) : null}
+      </div>
     </>
   );
 }

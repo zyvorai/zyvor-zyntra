@@ -17,6 +17,7 @@ export default function ServiceLevels() {
       />
       <ErrorNote message={error} onRetry={reload} />
       {!data && !error ? <PageSkeleton /> : null}
+      <div className="page-body" hidden={!data && !error}>
       <div className="stats">
         <Stat label="Service levels" value={data ? kpis.length : '—'} />
         <Stat label="Off target" value={data ? missing : '—'} tone={missing ? 'warn' : 'ok'} />
@@ -57,6 +58,7 @@ export default function ServiceLevels() {
           </TableScroll>
         )}
       </Card>
+      </div>
     </>
   );
 }

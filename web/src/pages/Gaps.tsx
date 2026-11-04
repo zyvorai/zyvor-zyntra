@@ -16,6 +16,7 @@ export default function Gaps() {
       />
       <ErrorNote message={error} onRetry={reload} />
       {!data && !error ? <PageSkeleton /> : null}
+      <div className="page-body" hidden={!data && !error}>
       <OwnerFilter owners={data?.owners} value={owner} onChange={setOwner} />
       <div className="stats">
         <Stat label="Gaps" value={data ? gaps.length : '—'} tone={gaps.length ? 'warn' : 'ok'} />
@@ -64,6 +65,7 @@ export default function Gaps() {
           </TableScroll>
         )}
       </Card>
+      </div>
     </>
   );
 }

@@ -365,3 +365,9 @@ kbd {
 .login-logo-spaced { margin-bottom: 1.25rem; }
 input[data-padded] { padding-right: 2.75rem; }
 .impact-item { margin-left: calc(var(--depth, 0) * var(--space-4)); }
+
+/* Page content waits for its data: the skeleton stands in, then the real
+   layout appears without shifting. display:contents keeps the wrapper out of
+   the layout, so its children still flow in the page's own rhythm. */
+.page-body { display: contents; }
+.page-body[hidden] { display: none; }
