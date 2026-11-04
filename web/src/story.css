@@ -371,3 +371,13 @@ input[data-padded] { padding-right: 2.75rem; }
    the layout, so its children still flow in the page's own rhythm. */
 .page-body { display: contents; }
 .page-body[hidden] { display: none; }
+
+/* Shaped skeletons (PageSkeleton shape=...): sized to the content that replaces them. */
+.skeleton-shape { display: grid; gap: var(--space-4); }
+.skeleton-cards .card { min-height: 174px; }
+.skeleton-pills { height: 44px; width: 55%; border-radius: 22px; margin-top: var(--space-4); }
+.skeleton-twin { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.skeleton-twin .card { min-height: 190px; }
+.skeleton-split { grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); align-items: start; margin-top: 16px; }
+.skeleton-split .card:last-child { min-height: 320px; }
+@media (max-width: 800px) { .skeleton-twin, .skeleton-split { grid-template-columns: 1fr; } }

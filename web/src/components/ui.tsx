@@ -103,7 +103,42 @@ export function Skeleton({ className = 'skeleton-line' }: { className?: string }
 }
 
 /** Placeholder for a page body while its first request is in flight. */
-export function PageSkeleton({ stats = true, rows = 4 }: { stats?: boolean; rows?: number }) {
+export function PageSkeleton({ stats = true, rows = 4, shape = 'card' }: { stats?: boolean; rows?: number; shape?: 'card' | 'cards' | 'twin' | 'split' }) {
+  // `shape` matches what replaces the skeleton, so the page does not move when data lands:
+  // cards = a stack of tall list cards (Plan), twin = two cards side by side (Insights),
+  // split = a list beside a detail card (Objects).
+  if (shape !== 'card')
+    return (
+      <div aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading</span>
+        <div className={`skeleton-shape skeleton-${shape}`} aria-hidden>
+          {shape === 'cards'
+            ? Array.from({ length: rows }, (_, i) => (
+                <div key={i} className="card">
+                  <Skeleton className="skeleton-line" />
+                  <Skeleton className="skeleton-line short" />
+                  <Skeleton className="skeleton-pills" />
+                </div>
+              ))
+            : shape === 'twin'
+              ? [0, 1].map((i) => (
+                  <div key={i} className="card">
+                    <Skeleton className="skeleton-line short" />
+                    {Array.from({ length: 3 }, (_, j) => (
+                      <Skeleton key={j} className="skeleton-line" />
+                    ))}
+                  </div>
+                ))
+              : [0, 1].map((i) => (
+                  <div key={i} className="card">
+                    {Array.from({ length: i === 0 ? rows : 6 }, (_, j) => (
+                      <Skeleton key={j} className={j % 3 === 2 ? 'skeleton-line short' : 'skeleton-line'} />
+                    ))}
+                  </div>
+                ))}
+        </div>
+      </div>
+    );
   return (
     <div aria-busy="true" aria-live="polite">
       <span className="sr-only">Loading</span>

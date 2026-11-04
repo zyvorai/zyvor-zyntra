@@ -82,7 +82,7 @@ export default function Insights({ setPage }: { setPage: (p: Page) => void }) {
         }
       />
       <ErrorNote message={ins.error} onRetry={ins.reload} />
-      {!ins.data && !ins.error ? <PageSkeleton stats={false} /> : null}
+      {!ins.data && !ins.error ? <PageSkeleton stats={false} shape="twin" /> : null}
       {ins.data ? (
       <>
       {st.data ? (
