@@ -15,8 +15,8 @@ services:
     build:
       context: .
       args:
-        VERSION: ${ZYNTRA_VERSION:-0.4.0}
-    image: zyntra:${ZYNTRA_VERSION:-0.4.0}
+        VERSION: ${ZYNTRA_VERSION:-0.5.0-dev}
+    image: zyntra:${ZYNTRA_VERSION:-0.5.0-dev}
     command: ["serve", "-f", "packs/${ZYNTRA_PACK:-shop}"]
     ports:
       - "127.0.0.1:8080:8080"
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
 
   receiver:
-    image: zyntra:${ZYNTRA_VERSION:-0.4.0}
+    image: zyntra:${ZYNTRA_VERSION:-0.5.0-dev}
     entrypoint: ["/usr/local/bin/zyntra-receiver"]
     command: ["-addr", ":9099", "-dir", "/var/lib/zyntra-inbox"]
     ports:
