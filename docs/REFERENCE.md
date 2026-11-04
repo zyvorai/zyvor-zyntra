@@ -252,7 +252,15 @@ The full reference (storage and capacity numbers, connectors, calibration, rollo
 
 ![Zyntra sign-in](ux/login.png)
 
-`zyntra serve` embeds a React console styled like Netra. Its pages are grouped as **Overview**; **Decide** (Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. There are light and dark themes. The Business group appears when the pack defines an ontology.
+`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
+
+Using the console:
+
+- **Command palette.** `Ctrl-K` or `Cmd-K` (or `/` outside a text field) opens a search over every page, with each page's one-line description, and over objects and decisions. Arrow keys move, Enter opens, Escape closes.
+- **Keyboard and screen readers.** The menus open on click, touch or `ArrowDown`, move with the arrow keys, `Home` and `End`, and close on `Escape`. After each page change focus moves to the page heading and the new page is announced.
+- **Light and dark.** The console follows the system setting until you pick one with the toggle, and a dark system never flashes white while loading.
+- **Phones.** Below 640 px the menus become a sheet (with the pack switcher when the instance serves several packs) and each table row becomes a labelled card. No page scrolls sideways down to 320 px.
+- **Loading and failures.** Pages show a skeleton until their data arrives instead of an empty or all-clear state, and every failed load says so ("Can't reach the server") with a Retry button.
 
 - **Sign-in** asks for a username, then a password (or SSO, or the access key). Out of the box that is `admin` / `Admin@321`, flagged with a banner until changed.
 
@@ -459,7 +467,7 @@ On the lab host, Keep sandboxes cannot reach the egress broker, so approved acti
 
 ### Container (Docker or Podman)
 
-Published images: `ghcr.io/zyvorai/zyntra` for linux/amd64 and linux/arm64. `:edge` and `:0.4.0-dev` track `main`, `:sha-<commit>` pins a build, and release tags add `:<version>`, `:<major>.<minor>` and `:latest`. Each image carries an SBOM, SLSA provenance and a keyless cosign signature:
+Published images: `ghcr.io/zyvorai/zyntra` for linux/amd64 and linux/arm64. `:edge` tracks `main`, `:sha-<commit>` pins a build, and release tags add `:<version>`, `:<major>.<minor>` and `:latest`. Each image carries an SBOM, SLSA provenance and a keyless cosign signature:
 
 ```bash
 docker pull ghcr.io/zyvorai/zyntra:edge
@@ -486,7 +494,7 @@ The image is distroless, runs as uid 65532, and keeps state (proposals, audit ch
 
 ```bash
 helm upgrade --install zyntra oci://ghcr.io/zyvorai/charts/zyntra --version 0.4.0 \
-  -n zyntra --create-namespace --set pack=shop            # image ghcr.io/zyvorai/zyntra:0.4.0-dev
+  -n zyntra --create-namespace --set pack=shop            # image ghcr.io/zyvorai/zyntra:0.4.0
 # or from a checkout: helm upgrade --install zyntra deploy/helm/zyntra ... --set image.repository=registry.internal/zyntra
 kubectl -n zyntra port-forward svc/zyntra 8080:8080
 kubectl -n zyntra get secret zyntra-auth -o jsonpath='{.data.ZYNTRA_API_KEY}' | base64 -d

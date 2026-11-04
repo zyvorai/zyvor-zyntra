@@ -12,6 +12,9 @@
 //   ZYNTRA_STATE_DIR=$(mktemp -d) ZYNTRA_ADMIN_PASSWORD=lab ZYNTRA_API_KEY=dev ./bin/zyntra serve -f packs/manufacturing -addr 127.0.0.1:8081 &
 //   PASSWORD=lab node docs/social/readme/capture.cjs mfg http://127.0.0.1:8081
 //
+// The script signs in through POST /api/v1/session and moves between pages by hash route, so it does
+// not depend on how the menus open.
+//
 // Use a fresh ZYNTRA_STATE_DIR per pack so objects and proposals do not mix.
 const path = require('node:path');
 const fs = require('node:fs');
@@ -27,32 +30,32 @@ fs.mkdirSync(out, { recursive: true });
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: process.env.CHROME ? undefined : 'chrome', executablePath: process.env.CHROME });
-  const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 })).newPage();
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: 'light' });
+  const signin = await ctx.request.post(base + '/api/v1/session', { data: { username: 'admin', password, remember: false } });
+  if (!signin.ok()) { console.error('sign-in failed: ' + signin.status()); process.exit(1); }
+  const page = await ctx.newPage();
   const wait = (ms) => page.waitForTimeout(ms);
-  await page.goto(base);
-  await page.getByText('Sign in', { exact: true }).first().click(); await wait(400);
-  await page.locator('input').first().fill('admin'); await page.keyboard.press('Enter'); await wait(400);
-  await page.locator('input[type=password]').first().fill(password); await page.keyboard.press('Enter'); await wait(2500);
-  const go = async (group, label) => {
-    const nav = page.locator('header, nav').getByText(group || label, { exact: true }).first();
-    if (group) { await nav.hover(); await wait(300); await page.getByText(label, { exact: true }).first().click(); } else await nav.click();
-    await page.mouse.move(700, 880); await wait(1800);
+  const go = async (id) => {
+    await page.goto(base + '/#/' + id); await page.reload();
+    await page.waitForSelector('nav'); await page.mouse.move(700, 880); await wait(2200);
   };
   const shot = (name, opts = {}) => page.screenshot({ path: path.join(out, name + '.png'), ...opts });
+  // The default-password banner is for first-run lab use, not for a product picture.
+  const hideBanner = () => page.addStyleTag({ content: '.banner:has(code){display:none !important}' });
 
   if (mode === 'gpu') {
-    await shot('overview');
-    await go('Decide', 'Plan'); await shot('plan');
-    await go('Decide', 'Simulate'); await page.getByRole('button', { name: 'Simulate' }).click(); await wait(2000); await shot('simulate', { fullPage: true });
-    await go(null, 'Signals'); await shot('signals');
-    await go(null, 'Model'); await shot('model');
+    await go('overview'); await hideBanner(); await shot('overview');
+    await go('plan'); await hideBanner(); await shot('plan');
+    await go('simulate'); await hideBanner(); await page.getByRole('button', { name: 'Simulate', exact: true }).click(); await wait(2200); await shot('simulate', { fullPage: true });
+    await go('signals'); await hideBanner(); await shot('signals');
+    await go('model'); await hideBanner(); await shot('model');
     // Approvals: propose the last (single, non-combined) action on Plan so the inbox has a real proposal.
-    await go('Decide', 'Plan');
+    await go('plan');
     const propose = page.getByRole('button', { name: 'Propose for approval' });
-    await propose.nth((await propose.count()) - 1).click(); await wait(2000);
-    await go('Act', 'Approvals'); await shot('approvals', { fullPage: true });
+    await propose.nth((await propose.count()) - 1).click(); await wait(2200);
+    await go('approvals'); await hideBanner(); await shot('approvals', { fullPage: true });
   } else if (mode === 'mfg') {
-    await go('Business', 'Scenarios');
+    await go('scenarios');
     const save = async (name, boxes) => {
       await page.getByPlaceholder(/Name, e\.g\./).fill(name);
       for (const b of boxes) await page.getByLabel(b).check();
@@ -63,9 +66,9 @@ fs.mkdirSync(out, { recursive: true });
     await save('More GPUs', [gpu]); await save('Alternate site', [alt]); await save('Both', [gpu, alt]);
     const boxes = page.locator('table input[type=checkbox]');
     for (let i = 0; i < (await boxes.count()); i++) await boxes.nth(i).check();
-    await wait(2000); await shot('scenarios', { fullPage: true });
-    await go('Business', 'Workflows'); await shot('workflows');
-    await go('Business', 'Objects');
+    await wait(2000); await hideBanner(); await shot('scenarios', { fullPage: true });
+    await go('workflows'); await hideBanner(); await shot('workflows');
+    await go('objects'); await hideBanner();
     await page.getByText('InspectionService', { exact: true }).first().click(); await wait(800);
     await page.getByText('Vision QA (plant A)', { exact: true }).first().click(); await wait(2000);
     await page.addStyleTag({ content: 'header,nav{position:static !important}' });

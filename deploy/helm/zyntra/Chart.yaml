@@ -5,7 +5,7 @@ name: zyntra
 description: Zyntra decision engine. Finds the KPI gap, ranks fixes, waits for a named human to approve.
 type: application
 version: 0.4.0
-appVersion: "0.4.0-dev"
+appVersion: "0.4.0"
 home: https://zyvor.dev
 sources:
   - https://github.com/zyvorai/zyntra
