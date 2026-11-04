@@ -36,6 +36,7 @@ export default function Nav({
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
+  const menuBtnRef = useRef<HTMLButtonElement | null>(null);
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const clearTimers = () => {
@@ -87,10 +88,28 @@ export default function Nav({
     e.preventDefault();
     clearTimers();
     setOpenGroup(label);
-    // The panel is rendered but hidden until open; focus once it is visible.
+    // The panel fades in with a visibility transition, and a browser ignores
+    // focus() on a hidden element, so retry for a few frames until it lands.
     const panel = e.currentTarget.parentElement?.querySelector<HTMLElement>('.mega-panel') ?? null;
-    requestAnimationFrame(() => focusItem(panel, 'first'));
+    const tryFocus = (left: number) => {
+      focusItem(panel, 'first');
+      if (left > 0 && panel && !panel.contains(document.activeElement)) requestAnimationFrame(() => tryFocus(left - 1));
+    };
+    requestAnimationFrame(() => tryFocus(12));
   };
+
+  // On a phone the menu is a full-height sheet: Escape closes it and hands
+  // focus back to the button that opened it.
+  useEffect(() => {
+    if (!sheet) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setSheet(false);
+      menuBtnRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [sheet]);
 
   useEffect(() => {
     if (!openGroup) return;
@@ -124,6 +143,7 @@ export default function Nav({
         </button>
         <button
           type="button"
+          ref={menuBtnRef}
           className="theme-toggle nav-menu-btn"
           aria-label={sheet ? 'Close menu' : 'Open menu'}
           aria-expanded={sheet}
