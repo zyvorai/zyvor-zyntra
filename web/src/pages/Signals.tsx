@@ -107,6 +107,7 @@ export default function Signals() {
       />
       <ErrorNote message={src.error || graph.error} onRetry={() => { src.reload(); graph.reload(); }} />
       {!src.data && !src.error ? <PageSkeleton /> : null}
+      <div className="page-body" hidden={!src.data && !src.error}>
       <div className="source-grid">
         {sources.length === 0 && src.data ? <Empty>No live sources configured.</Empty> : null}
         {sources.map((s) => {
@@ -221,6 +222,7 @@ export default function Signals() {
           </table></TableScroll>
         )}
       </Card>
+      </div>
     </>
   );
 }

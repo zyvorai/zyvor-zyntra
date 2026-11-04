@@ -26,7 +26,7 @@ export default function KPIInvestigation() {
   };
   return <Card title="Investigate a KPI">
     <p className="muted small">Check for sustained changes and explore metrics whose hourly changes preceded or moved with the target. Every calculation uses recorded observations.</p>
-    <ErrorNote message={catalog.error || error} />
+    <ErrorNote message={catalog.error || error} onRetry={catalog.error ? catalog.reload : undefined} />
     {catalog.data?.metrics.length === 0 ? <Empty>No permitted metrics in this pack.</Empty> : null}
     <form onSubmit={run}>
       <fieldset disabled={busy || !catalog.data?.metrics.length}>

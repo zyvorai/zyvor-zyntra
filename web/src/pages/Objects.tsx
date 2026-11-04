@@ -4,7 +4,7 @@ import { useApi } from '../hooks';
 import { display } from '../format';
 import { objectFromHash, openObject } from '../nav';
 import { useWho } from '../session';
-import { Card, Empty, ErrorNote, PageHero, Pill, TableScroll } from '../components/ui';
+import { Card, Empty, ErrorNote, PageHero, PageSkeleton, Pill, TableScroll } from '../components/ui';
 import NoOntology from '../components/NoOntology';
 
 const nameOf = (o: OntObject) => String(o.props.name?.v ?? o.id);
@@ -72,8 +72,8 @@ function History({ id }: { id: string }) {
 }
 
 function Detail({ id }: { id: string }) {
-  const { data, error } = useApi<OntObjectDetail>(`/api/v1/ontology/objects/${encodeURIComponent(id)}`, 15000);
-  if (error) return <ErrorNote message={error} />;
+  const { data, error, reload } = useApi<OntObjectDetail>(`/api/v1/ontology/objects/${encodeURIComponent(id)}`, 15000);
+  if (error) return <ErrorNote message={error} onRetry={reload} />;
   if (!data) return <p className="muted">Loading…</p>;
   const { object: o } = data;
   return (
@@ -258,6 +258,7 @@ function useObjectPages(type: string, q: string) {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const seq = useRef(0);
   const base = `/api/v1/ontology/objects?limit=${PAGE}&type=${encodeURIComponent(type)}&q=${encodeURIComponent(q)}`;
 
@@ -273,8 +274,9 @@ function useObjectPages(type: string, q: string) {
         setLoaded(true);
       })
       .catch((e) => n === seq.current && setError((e as Error).message));
-  }, [base]);
+  }, [base, attempt]);
 
+  const retry = () => setAttempt((a) => a + 1);
   const more = async () => {
     if (!next || busy) return;
     const n = seq.current;
@@ -291,7 +293,7 @@ function useObjectPages(type: string, q: string) {
       setBusy(false);
     }
   };
-  return { items, hasMore: next !== '', loaded, busy, error, more };
+  return { items, hasMore: next !== '', loaded, busy, error, more, retry };
 }
 
 const OBJECTS_LEDE =
@@ -326,7 +328,7 @@ function ObjectsBody() {
         tint="purple"
         lede={OBJECTS_LEDE}
       />
-      <ErrorNote message={schema.error} />
+      <ErrorNote message={schema.error} onRetry={schema.reload} />
       <Capacity />
       <Resolution />
       <Connectors />
@@ -343,8 +345,9 @@ function ObjectsBody() {
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or id" aria-label="Search objects" maxLength={100} />
       <div className="two-col">
         <Card>
-          <ErrorNote message={list.error} />
-          {list.loaded && list.items.length === 0 ? (
+          <ErrorNote message={list.error} onRetry={list.retry} />
+          {!list.loaded && !list.error ? <PageSkeleton stats={false} rows={5} /> : null}
+          {!list.loaded ? null : list.items.length === 0 ? (
             <Empty>No objects match.</Empty>
           ) : (
             <ul className="plain">

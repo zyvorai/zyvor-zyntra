@@ -37,7 +37,7 @@ export default function WatchInbox() {
  const active=list.data?.incidents.filter(i=>i.status!=='resolved') ?? [];
  return <Card title="KPI watch inbox" aside={<Pill tone={active.length?'warn':'neutral'}>{active.length} active</Pill>}>
   <p className="muted small">Sustained threshold watches evaluate fresh live observations. Missing or failed data cannot establish breach or recovery duration. Acknowledgement records ownership; it does not close an incident or run an action.</p>
-  <ErrorNote message={list.error || list.data?.persistence_error || ''} />
+  <ErrorNote message={list.error || list.data?.persistence_error || ''} onRetry={list.error ? list.reload : undefined} />
   {note ? <p role="status" className="small">{note}</p> : null}
   {list.data?.incidents.length===0 ? <Empty>No retained watch incidents.</Empty> : null}
   {list.data?.incidents.map(i=><details key={i.id} className="trace" open={i.status!=='resolved'}><summary>{i.rule.name} · {i.status} · {i.id}</summary>
@@ -60,7 +60,7 @@ export default function WatchInbox() {
   {remove && admin ? <div className="info-note"><p>Delete {remove.name}? Its active incident closes as “rule deleted”; retained incident history stays visible.</p><button className="btn-secondary" disabled={busy} onClick={deleteRule}>Confirm rule deletion</button><button className="btn-secondary" onClick={()=>setRemove(null)}>Cancel rule deletion</button></div> : null}
   {editing && admin ? <form onSubmit={save}>
    <p className="small">Saving changes closes the current incident as “rule changed” and resets duration timers. Metric tenant scope cannot change.</p>
-   <ErrorNote message={catalog.error} />
+   <ErrorNote message={catalog.error} onRetry={catalog.reload} />
    <fieldset disabled={busy}><legend>Watch rule settings</legend><div className="grid-2">
     <label>Rule ID<input aria-label="Watch rule ID" required pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}" readOnly={draft.version>0} value={draft.id} onChange={e=>setDraft({...draft,id:e.target.value})}/></label>
     <label>Name<input aria-label="Watch rule name" required maxLength={120} value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})}/></label>

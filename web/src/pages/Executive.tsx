@@ -139,7 +139,14 @@ export default function Executive() {
           </div>
         }
       />
-      {inbox.error ? <ErrorNote message={inbox.error} onRetry={inbox.reload} /> : null}
+      <ErrorNote
+        message={inbox.error || brief.error || reviews.error}
+        onRetry={() => {
+          inbox.reload();
+          brief.reload();
+          reviews.reload();
+        }}
+      />
       {!inbox.data && !inbox.error ? <PageSkeleton stats={false} /> : null}
       {note ? <ErrorNote message={note} /> : null}
       <div className="grid-2">
@@ -245,7 +252,7 @@ export default function Executive() {
             </Card>
           </div>
         </>
-      ) : brief.error ? <ErrorNote message={brief.error} /> : null}
+      ) : null}
     </>
   );
 }

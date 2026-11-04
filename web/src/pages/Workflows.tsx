@@ -51,6 +51,7 @@ function WorkflowsBody({ setPage }: { setPage?: (p: Page) => void }) {
       <PageHero eyebrow="Business" title="Workflows" tint="amber" lede={WORKFLOWS_LEDE} />
       <ErrorNote message={schema.error || view.error || err} onRetry={() => { schema.reload(); view.reload(); }} />
       {!schema.data && !schema.error ? <PageSkeleton /> : null}
+      <div className="page-body" hidden={!schema.data && !schema.error}>
       {note ? (
         <p className="info-note">
           {note}{' '}
@@ -124,6 +125,7 @@ function WorkflowsBody({ setPage }: { setPage?: (p: Page) => void }) {
           </table></TableScroll>
         )}
       </Card>
+      </div>
     </>
   );
 }

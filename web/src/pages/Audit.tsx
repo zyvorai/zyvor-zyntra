@@ -42,6 +42,7 @@ export default function Audit() {
       />
       <ErrorNote message={local.error} onRetry={local.reload} />
       {!local.data && !local.error ? <PageSkeleton stats={false} /> : null}
+      <div className="page-body" hidden={!local.data && !local.error}>
       <Card
         title="Zyntra decisions"
         aside={
@@ -137,6 +138,7 @@ export default function Audit() {
           </table></TableScroll>
         )}
       </Card>
+      </div>
     </>
   );
 }

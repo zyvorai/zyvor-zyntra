@@ -95,6 +95,7 @@ export default function Approvals() {
       />
       <ErrorNote message={error} onRetry={reload} />
       {!data && !error ? <PageSkeleton /> : null}
+      <div className="page-body" hidden={!data && !error}>
       {data ? (
         <div className="banner">
           <ShieldCheck size={18} aria-hidden />
@@ -347,6 +348,7 @@ export default function Approvals() {
             ) : null}
           </Card>
         ))}
+      </div>
       </div>
     </>
   );

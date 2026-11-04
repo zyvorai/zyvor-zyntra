@@ -458,7 +458,13 @@ export async function api<T>(path: string, init?: RequestInit & { json?: unknown
   }
   const pack = getPack();
   if (pack && !headers.has('X-Zyntra-Pack')) headers.set('X-Zyntra-Pack', pack);
-  const res = await fetch(path, { ...init, headers, body, credentials: 'same-origin' });
+  let res: Response;
+  try {
+    res = await fetch(path, { ...init, headers, body, credentials: 'same-origin' });
+  } catch {
+    // The browser's own text ("Failed to fetch", "Load failed") says nothing useful.
+    throw new ApiError(0, "Can't reach the server. Check your connection and try again.");
+  }
   const text = await res.text();
   let data: unknown = null;
   if (text) {
