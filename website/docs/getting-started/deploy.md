@@ -27,7 +27,7 @@ On the lab host, Keep sandboxes cannot reach the egress broker, so approved acti
 
 ## Container (Docker or Podman)
 
-Published images: `ghcr.io/zyvorai/zyntra` for linux/amd64 and linux/arm64. `:edge` and `:0.4.0-dev` track `main`, `:sha-<commit>` pins a build, and release tags add `:<version>`, `:<major>.<minor>` and `:latest`. Each image carries an SBOM, SLSA provenance and a keyless cosign signature:
+Published images: `ghcr.io/zyvorai/zyntra` for linux/amd64 and linux/arm64. `:edge` tracks `main`, `:sha-<commit>` pins a build, and release tags add `:<version>`, `:<major>.<minor>` and `:latest`. Each image carries an SBOM, SLSA provenance and a keyless cosign signature:
 
 ```bash
 docker pull ghcr.io/zyvorai/zyntra:edge
@@ -54,7 +54,7 @@ The image is distroless, runs as uid 65532, and keeps state (proposals, audit ch
 
 ```bash
 helm upgrade --install zyntra oci://ghcr.io/zyvorai/charts/zyntra --version 0.4.0 \
-  -n zyntra --create-namespace --set pack=shop            # image ghcr.io/zyvorai/zyntra:0.4.0-dev
+  -n zyntra --create-namespace --set pack=shop            # image ghcr.io/zyvorai/zyntra:0.4.0
 # or from a checkout: helm upgrade --install zyntra deploy/helm/zyntra ... --set image.repository=registry.internal/zyntra
 kubectl -n zyntra port-forward svc/zyntra 8080:8080
 kubectl -n zyntra get secret zyntra-auth -o jsonpath='{.data.ZYNTRA_API_KEY}' | base64 -d
