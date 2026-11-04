@@ -1,6 +1,6 @@
 import { fmt, pct, sev, type Gap } from '../api';
 import { useApi, useOwner, withOwner } from '../hooks';
-import { Card, Empty, ErrorNote, Meter, OwnerFilter, PageHero, PageSkeleton, Stat } from '../components/ui';
+import { Card, Empty, ErrorNote, Meter, OwnerFilter, PageHero, PageSkeleton, Stat, TableScroll } from '../components/ui';
 
 export default function Gaps() {
   const [owner, setOwner] = useOwner();
@@ -26,6 +26,7 @@ export default function Gaps() {
         {data && gaps.length === 0 ? (
           <Empty>{owner ? `No gaps owned by ${owner}.` : 'No gaps. Every KPI with a target meets it.'}</Empty>
         ) : (
+          <TableScroll>
           <table className="table">
             <thead>
               <tr>
@@ -60,6 +61,7 @@ export default function Gaps() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         )}
       </Card>
     </>

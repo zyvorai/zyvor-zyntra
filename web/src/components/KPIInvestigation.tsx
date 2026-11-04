@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { api, type AnalyticsMetric, type InvestigationReport } from '../api';
 import { useApi } from '../hooks';
-import { Card, Empty, ErrorNote, Pill } from './ui';
+import { Card, Empty, ErrorNote, Pill, TableScroll } from './ui';
 
 export default function KPIInvestigation() {
   const catalog = useApi<{ metrics: AnalyticsMetric[] }>('/api/v1/analytics/catalog');
@@ -66,11 +66,11 @@ export function InvestigationEvidence({ report, exportValue = report, filename =
     {shift.delta !== undefined ? <p>Baseline median: {measure(shift.baseline_median!)} {unit} over {shift.baseline_hours} consecutive hours. Recent median: {measure(shift.recent_median!)} {unit} over {shift.recent_hours} hours. Change: {measure(shift.delta)} {unit}. Threshold: {measure(shift.threshold!)} {unit}; {shift.beyond_threshold} hours exceeded it; {shift.required_hours} are required for a sustained shift.</p> : null}
     <p className="muted small">{report.caveat}</p>
     {report.candidates_truncated ? <p className="error-note">Candidate search capped at 64 of {report.candidate_total} permitted metrics, selected by metric ID.</p> : null}
-    {associations.length ? <div style={{ overflowX: 'auto' }}><table className="table compact">
+    {associations.length ? <TableScroll><table className="table compact">
       <caption>Strongest exploratory associations for {report.target.id} (up to 5)</caption>
       <thead><tr><th>Candidate</th><th>Change correlation</th><th>Candidate lead</th><th>Aligned pairs</th><th>Eligible lags</th></tr></thead>
       <tbody>{associations.map(c => <tr key={c.id}><td>{c.name || c.id}{c.warning ? <p className="small">{c.warning}</p> : null}</td><td>{c.correlation!.toFixed(3)}</td><td>{c.lag_hours === 0 ? 'Same hour' : `${c.lag_hours}h earlier`}</td><td>{c.pairs}</td><td>{c.tested_lags}</td></tr>)}</tbody>
-    </table></div> : <p>No eligible candidate reached the exploratory association threshold.</p>}
+    </table></TableScroll> : <p>No eligible candidate reached the exploratory association threshold.</p>}
     <details className="trace"><summary>Method and comparison diagnostics ({report.comparisons.length})</summary>
       <p className="small">{report.method}</p>
       {report.comparisons.map(c => <div key={c.id}>
@@ -80,16 +80,16 @@ export function InvestigationEvidence({ report, exportValue = report, filename =
         {c.warning ? <p className="error-note">{c.warning}</p> : null}
         {c.start && c.end ? <p className="small">Target change times: {utc(c.start)} to {utc(c.end)}</p> : null}
         {c.sha256 ? <p className="mono small" style={{ overflowWrap: 'anywhere' }}>Aligned-pair SHA-256 {c.sha256}</p> : null}
-        {c.evidence?.length ? <details><summary>Aligned change evidence for {c.id} ({c.evidence.length} pairs)</summary><p className="small">Latest 12 pairs shown; all pairs for up to five scored comparisons are included in the JSON export. Candidate change time is target time minus the reported lead.</p><div style={{ overflowX: 'auto' }}><table className="table compact"><caption>Aligned changes for {c.id}</caption><thead><tr><th>Target change time (UTC)</th><th>Candidate change ({c.unit || 'value'})</th><th>Target change ({unit || 'value'})</th></tr></thead><tbody>{c.evidence.slice(-12).map(p => <tr key={p.at}><td>{utc(p.at)}</td><td>{measure(p.candidate_change)}</td><td>{measure(p.target_change)}</td></tr>)}</tbody></table></div></details> : null}
+        {c.evidence?.length ? <details><summary>Aligned change evidence for {c.id} ({c.evidence.length} pairs)</summary><p className="small">Latest 12 pairs shown; all pairs for up to five scored comparisons are included in the JSON export. Candidate change time is target time minus the reported lead.</p><TableScroll><table className="table compact"><caption>Aligned changes for {c.id}</caption><thead><tr><th>Target change time (UTC)</th><th>Candidate change ({c.unit || 'value'})</th><th>Target change ({unit || 'value'})</th></tr></thead><tbody>{c.evidence.slice(-12).map(p => <tr key={p.at}><td>{utc(p.at)}</td><td>{measure(p.candidate_change)}</td><td>{measure(p.target_change)}</td></tr>)}</tbody></table></TableScroll></details> : null}
       </div>)}
     </details>
     <details className="trace"><summary>Target hourly evidence ({report.hours.length} hours)</summary>
       {report.sha256 ? <p className="mono small" style={{ overflowWrap: 'anywhere' }}>Hourly SHA-256 {report.sha256}</p> : null}
       <p className="muted small">Most recent 24 observed hours shown; the JSON export includes all observed hours in the window.</p>
-      {report.hours.length ? <div style={{ overflowX: 'auto' }}><table className="table compact"><caption>Recent observed hours for {report.target.id}</caption>
+      {report.hours.length ? <TableScroll><table className="table compact"><caption>Recent observed hours for {report.target.id}</caption>
         <thead><tr><th>Hour start (UTC)</th><th>Mean ({unit || 'value'})</th><th>Samples</th></tr></thead>
         <tbody>{report.hours.slice(-24).map(h => <tr key={h.start}><td>{utc(h.start)}</td><td>{measure(h.mean)}</td><td>{h.samples}</td></tr>)}</tbody>
-      </table></div> : <p>No usable completed hours.</p>}
+      </table></TableScroll> : <p>No usable completed hours.</p>}
     </details>
     <button className="btn-secondary" onClick={download}>Download investigation JSON</button>
   </div>;

@@ -4,7 +4,7 @@ import { useApi, useOwner, withOwner } from '../hooks';
 import type { Page } from '../nav';
 import { useWho } from '../session';
 import SimResultView from '../components/SimResultView';
-import { Card, Empty, ErrorNote, OwnerFilter, PageHero, PageSkeleton, Pill, riskTone } from '../components/ui';
+import { Card, Empty, ErrorNote, OwnerFilter, PageHero, PageSkeleton, Pill, TableScroll, riskTone } from '../components/ui';
 
 const confTone = { high: 'ok', medium: 'warn', low: 'bad' } as const;
 
@@ -158,6 +158,7 @@ export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
       {blocked.length ? (
         <Card title="Blocked by constraints and invariants" aside={<Pill tone="bad">{blocked.length}</Pill>}>
           <p className="muted small">These would improve some KPIs but break a constraint or an invariant, so Zyntra will not propose them.</p>
+          <TableScroll>
           <table className="table compact">
             <thead>
               <tr>
@@ -176,6 +177,7 @@ export default function Plan({ setPage }: { setPage: (p: Page) => void }) {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </Card>
       ) : null}
     </>

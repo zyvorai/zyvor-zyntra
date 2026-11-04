@@ -1,7 +1,7 @@
 import { fmt, type Contradiction, type EdgeProposal, type Model } from '../api';
 import PackDraftCard from '../components/PackDraft';
 import { useApi } from '../hooks';
-import { Card, ErrorNote, KpiValue, PageHero, PageSkeleton, Pill, kpiMet, riskTone } from '../components/ui';
+import { Card, ErrorNote, KpiValue, PageHero, PageSkeleton, Pill, TableScroll, kpiMet, riskTone } from '../components/ui';
 
 export default function ModelPage() {
   const { data, error, reload } = useApi<{ model: Model; refreshed_at: string }>('/api/v1/graph', 30000);
@@ -47,6 +47,7 @@ export default function ModelPage() {
           </Card>
           <div className="grid-2">
             <Card title={`Edges (${m.edges.length})`}>
+              <TableScroll>
               <table className="table compact">
                 <thead>
                   <tr>
@@ -65,6 +66,7 @@ export default function ModelPage() {
                   ))}
                 </tbody>
               </table>
+              </TableScroll>
             </Card>
             <Card title={`Actions (${m.actions.length})`}>
               <ul className="list">
