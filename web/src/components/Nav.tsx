@@ -130,6 +130,29 @@ export default function Nav({
     };
   }, [openGroup]);
 
+  // The pack switcher shows only when one instance serves several packs. On a
+  // phone the bar has no room for it, so the same control also sits in the menu sheet.
+  const packSelect = (className: string) =>
+    packs && packs.length > 1 ? (
+      <select
+        className={className}
+        aria-label="Pack"
+        value={packs.some((p) => p.id === getPack()) ? getPack() : (packs.find((p) => p.default) ?? packs[0]).id}
+        onChange={(e) => {
+          // Every cached answer belongs to the old pack, so start the console afresh.
+          setPack(e.target.value);
+          window.location.hash = '/overview';
+          window.location.reload();
+        }}
+      >
+        {packs.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.title || p.id}
+          </option>
+        ))}
+      </select>
+    ) : null;
+
   const gaps = pulse?.gaps?.length ?? 0;
   const pending = pulse?.pending_approvals ?? 0;
   const chipTone = pulse && pulse.severity_total > 0.5 ? 'critical' : gaps > 0 ? 'warning' : '';
@@ -210,6 +233,12 @@ export default function Nav({
               </button>
             )
           )}
+          {sheet && packs && packs.length > 1 ? (
+            <div className="pack-select-sheet">
+              <span aria-hidden>Pack</span>
+              {packSelect('pack-select')}
+            </div>
+          ) : null}
         </div>
         <div className="nav-actions">
           <button
@@ -224,34 +253,17 @@ export default function Nav({
               <path d="M16 16l4.5 4.5" strokeLinecap="round" />
             </svg>
           </button>
-          {packs && packs.length > 1 ? (
-            <select
-              className="pack-select"
-              aria-label="Pack"
-              value={packs.some((p) => p.id === getPack()) ? getPack() : (packs.find((p) => p.default) ?? packs[0]).id}
-              onChange={(e) => {
-                // Every cached answer belongs to the old pack, so start the console afresh.
-                setPack(e.target.value);
-                window.location.hash = '/overview';
-                window.location.reload();
-              }}
-            >
-              {packs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title || p.id}
-                </option>
-              ))}
-            </select>
-          ) : null}
+          {packSelect('pack-select pack-select-bar')}
           {pulse ? (
             <button
               type="button"
               className={`digest-chip ${chipTone}`}
+              aria-label={gaps === 0 ? 'On target' : `${gaps} gap${gaps === 1 ? '' : 's'}`}
               onClick={() => setPage('gaps')}
               title={`Total severity ${(pulse.severity_total * 100).toFixed(1)}%`}
             >
               <span className={`dot ${chipTone || 'ok'}`} aria-hidden />
-              {gaps === 0 ? 'On target' : `${gaps} gap${gaps === 1 ? '' : 's'}`}
+              <span className="digest-label">{gaps === 0 ? 'On target' : `${gaps} gap${gaps === 1 ? '' : 's'}`}</span>
             </button>
           ) : null}
           {onLogout ? (
