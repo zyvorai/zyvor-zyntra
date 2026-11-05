@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/zyvorai/zyntra/internal/fakeaviation"
 	"github.com/zyvorai/zyntra/internal/fakedefence"
 )
 
@@ -22,7 +23,8 @@ import (
 //	ZYNTRA_FABRIC_URL=http://ADDR ZYNTRA_KEEP_URL=http://ADDR
 //
 // It also serves invented maintenance, supply and GRC exports under /defence
-// for examples/defence (bearer token fakedefence.Token).
+// for examples/defence (bearer token fakedefence.Token), and invented flight
+// and maintenance exports under /aviation for examples/aviation (fakeaviation.Token).
 func fakeSources(ctx context.Context, addr string) error {
 	start := time.Now()
 	elapsed := func() float64 { return time.Since(start).Seconds() }
@@ -76,6 +78,7 @@ func fakeSources(ctx context.Context, addr string) error {
 
 	// Invented maintenance, supply and GRC exports for examples/defence.
 	mux.Handle("/defence/", http.StripPrefix("/defence", fakedefence.Handler()))
+	mux.Handle("/aviation/", http.StripPrefix("/aviation", fakeaviation.Handler()))
 
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go func() {

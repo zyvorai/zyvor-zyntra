@@ -113,12 +113,17 @@ actions:
 | `file` / `url` | Path relative to the model (or pack) directory / URL; `${ZYNTRA_*}` is expanded |
 | `format` | `csv`, `json`, `yaml` or `prometheus`; guessed from the extension or content type |
 | `field` | Field path into the document, as for `json` sources; `*.amount` collects a column |
-| `where` | Keep only rows whose columns equal these values |
-| `agg` | `sum` (default), `avg`, `min`, `max`, `count`, `first`, `last` |
+| `where` | Keep only rows whose columns match. A plain value is a case-insensitive equality. `">9"`, `">=9"`, `"<9"`, `"<=9"` compare numbers (a cell that is not a number never matches), `"!=closed"` negates, `"in:open\|hold"` matches any listed value, and a leading `=` forces equality for a value that starts with an operator. Several keys are ANDed |
+| `timeField` / `within` | Both or neither, on `file`, `http` and `sheet` sources. Keep only rows whose `timeField` (RFC 3339 text, `YYYY-MM-DD`, or epoch seconds) is no older than `within` (`24h`, `30d`), before `where` and `agg` apply. A row with no usable timestamp is an error, so a bad export cannot silently shrink a count |
+| `agg` | `sum` (default), `avg`, `min`, `max`, `count`, `first`, `last`, or a percentile `p1` to `p99` (nearest rank: the smallest value with at least that share of the values at or below it, so `p90` of ten values is the ninth smallest). An empty set is an error |
 | `denominator` | Second field path; the KPI is `field / denominator` |
 | `headers` | Request headers for `http` and `sheet` |
 | `name` | The `webhook-in` channel (`POST /api/v1/ingest/<name>`) |
 | `staleAfter` | Age after which a `webhook-in` or `manual` value is stale |
+| `next` | `http` only: JSON path to the next page's URL (`links.next`; `'@odata\.nextLink'` for a key containing a dot). It must be on the same host as `url`, so credentials in `headers` never follow a link elsewhere |
+| `items` | With `next`: JSON path to the list on each page. The lists are joined into one list that `field`, `where` and `agg` read like a CSV; empty means the page itself is the list |
+| `maxPages` | With `next`: page cap (default 20, at most 100). Going past it is an error, never a silent truncation. A next link that repeats an earlier page is an error too |
+| `retries` | `http` and `sheet`: how many times to retry after HTTP 429 or 5xx (0 to 3), pausing 250 ms and doubling, or for `Retry-After` (at most 5 s). Other failures, including timeouts and 4xx answers, are not retried |
 
 Webhook bodies resolve `kpi:<id>` to the live value and `gap:<id>` to the gap (value, target, severity). File content is a Go template with `.Action`, `.KPIs`, `.Gaps`, `.Date`, `.Time` and `.Stamp`, plus `pct` and `num`; a missing key is an error, not an empty string.
 
@@ -158,7 +163,7 @@ zyntra gaps -f examples/prometheus-kpis.yaml -prometheus http://prometheus:9090 
   source: {kind: fabric, path: /api/v1/system/info, field: "filesystems.#(mountpoint=/).usage_percent"}
 ```
 
-Fields support `a.b.0`, `list.#` (count), `list.#(k=v)` (count matches), `list.#(k=v).f` (field of the first match) and `list.*.f`, plus `scale`, `agg: sum|avg|max|min` and `rate`. See [packs/gpu](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/gpu) for a full lab model (20 KPIs) that uses every v0.3 field.
+Fields support `a.b.0`, `list.#` (count), `list.#(k=v)` (count matches), `list.#(k=v).f` (field of the first match) and `list.*.f`, plus `scale`, `agg: sum|avg|max|min` (generic sources also take `count`, `first`, `last` and percentiles `p1` to `p99`) and `rate`. See [packs/gpu](https://github.com/zyvorai/zyvor-zyntra/blob/main/packs/gpu) for a full lab model (20 KPIs) that uses every v0.3 field.
 
 ## Packs (any industry)
 
@@ -186,7 +191,7 @@ zyntra gaps -f packs/shop -owner floor
   source: {kind: http, url: "${ZYNTRA_ERP_URL}/po?status=open", headers: {Authorization: "Bearer ${ZYNTRA_ERP_TOKEN}"}, field: "#"}
 ```
 
-Every source reports `ok`, `stale`, `error` or `fallback`. Only `${ZYNTRA_*}` variables are expanded, and they stay unexpanded in rendered proposals.
+The [industry packs](/docs/packs/defence) for defence, aviation, airports, plants, drones and launch ranges use these sources with `where` comparisons, percentiles and trailing windows. Every source reports `ok`, `stale`, `error` or `fallback`. Only `${ZYNTRA_*}` variables are expanded, and they stay unexpanded in rendered proposals.
 
 **Generic actions.** Besides kubectl and Keep, an action can be a `webhook` (dry-run prints method, URL, headers and body; apply sends it with an `Idempotency-Key` and records the status and response hash), a `file` (written under `ZYNTRA_OUTPUT_DIR`, never overwritten) or `noop` (people do it; the approval is recorded). Actions can also declare:
 

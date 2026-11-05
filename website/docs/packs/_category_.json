@@ -1,0 +1,8 @@
+{
+  "label": "Industry packs",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Advisory packs for defence, aviation, airports, industry, drones and launch ranges, and how Zyntra's controls map to NIST SP 800-171."
+  }
+}
