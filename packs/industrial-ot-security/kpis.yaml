@@ -1,0 +1,107 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Asset monitoring, patch age and remote access for an industrial control
+# network, in the spirit of IEC 62443 and zone-based segmentation. It is a
+# posture view, not an assessment: it does not assign security levels. The
+# fixture/ files are a small invented sample; point the file sources at your OT
+# asset inventory and remote-access log (same columns). Targets and weights are
+# starting points, not a standard.
+name: industrial-ot-security
+
+kpis:
+  - id: monitoring_coverage
+    name: Assets under security monitoring
+    unitClass: ratio
+    owner: security
+    value: 0
+    target: 0.9
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/assets.csv, field: "#(monitored=yes)", denominator: "#"}
+
+  - id: critical_assets_unpatched
+    name: High-criticality assets unpatched over 180 days
+    unit: assets
+    unitClass: count
+    owner: security
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/assets.csv, field: "#", where: {criticality: "=high", patch_age_days: ">180"}}
+
+  - id: patch_age_p90_days
+    name: Patch age, 90th percentile
+    unit: d
+    unitClass: duration
+    owner: security
+    value: 0
+    target: 90
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/assets.csv, field: "*.patch_age_days", agg: p90}
+
+  - id: internet_exposed_assets
+    name: OT assets reachable from the internet
+    unit: assets
+    unitClass: count
+    owner: security
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/assets.csv, field: "#(internet_exposed=yes)"}
+
+  - id: unapproved_remote_sessions
+    name: Remote sessions without approval
+    unit: sessions
+    unitClass: count
+    owner: operations
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/remote.csv, field: "#(approved=no)"}
+
+
+edges:
+  - {from: monitoring_coverage, to: critical_assets_unpatched, weight: -0.5, confidence: 0.3, why: monitored assets are likelier to have patch gaps noticed and fixed}
+  - {from: internet_exposed_assets, to: unapproved_remote_sessions, weight: 0.3, confidence: 0.2, why: exposed assets give remote access more routes to bypass approval}
+  - {from: patch_age_p90_days, to: internet_exposed_assets, weight: 0.005, confidence: 0.2, why: old software on a reachable asset is what makes the exposure matter}
+
+actions:
+  - id: enable_monitoring
+    title: Add monitoring to unmonitored assets
+    description: Put the unmonitored assets under passive network monitoring.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: monitoring_coverage, change: 0.2, uncertainty: 0.3}
+
+  - id: patch_critical_asset
+    title: Patch a critical asset in the next stop
+    description: Apply the vendor-approved patch to the oldest unpatched high-criticality asset. Patching a control asset can stop a process, so two approvers are needed and it is blocked if exposure grows.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: internet_exposed_assets, max_worsen: 0.5, why: a patch must not add exposure}
+    effects:
+      - {kpi: critical_assets_unpatched, change: -0.5, uncertainty: 0.4}
+      - {kpi: patch_age_p90_days, change: -0.2, uncertainty: 0.4}
+
+  - id: isolate_exposed_asset
+    title: Remove the internet path to an exposed asset
+    description: Close the route that makes the asset reachable from outside the plant network. Changing a firewall rule can cut production data, so two approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 2
+    effects:
+      - {kpi: internet_exposed_assets, change: -0.8, uncertainty: 0.3}
+

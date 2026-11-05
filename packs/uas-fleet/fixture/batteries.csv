@@ -1,0 +1,6 @@
+battery_id,cycles,resistance_mohm
+b1,120,18
+b2,310,32
+b3,260,29
+b4,480,45
+b5,90,15

@@ -58,6 +58,6 @@ roles. To keep sensitive KPIs from lower clearances, combine it with the
 
 A-CDM milestone messaging and runway-capacity or ATC-delay measures (the
 airport pack covers turnaround, stands, slot adherence, baggage and security
-queues only), drone and eVTOL fleets and launch-range scheduling are planned as separate
-packs. Real connectors for named operations or maintenance systems are not
-included. Certification of any kind is out of scope.
+queues only), drone and eVTOL fleets and launch ranges are in
+[INDUSTRIAL.md](INDUSTRIAL.md). Real connectors for named operations or
+maintenance systems are not included. Certification of any kind is out of scope.

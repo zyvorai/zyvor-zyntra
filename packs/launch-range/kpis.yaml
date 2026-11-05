@@ -1,0 +1,124 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Range-slot use, pad turnaround, ground-equipment readiness and holds for a
+# launch range or spaceport. The fixture/ files are a small invented sample; point
+# the file sources at your range-scheduling and ground-systems exports (same
+# columns). Targets and weights are starting points, not a standard.
+name: launch-range
+
+kpis:
+  - id: slot_utilisation
+    name: Range slots booked
+    unitClass: ratio
+    owner: range
+    value: 0
+    target: 0.7
+    direction: higher
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/slots.csv, field: "#(state=booked)", denominator: "#"}
+
+  - id: slots_held
+    name: Range slots on hold
+    unit: slots
+    unitClass: count
+    owner: range
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/slots.csv, field: "#(state=held)"}
+
+  - id: pad_turnaround_p90_h
+    name: Pad turnaround, 90th percentile
+    unit: h
+    unitClass: duration
+    owner: ground-systems
+    value: 0
+    target: 120
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/pads.csv, field: "*.turnaround_h", agg: p90}
+
+  - id: equipment_ready_ratio
+    name: Ground equipment ready
+    unitClass: ratio
+    owner: ground-systems
+    value: 0
+    target: 0.9
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/equipment.csv, field: "#(state=ready)", denominator: "#"}
+
+  - id: critical_equipment_not_ready
+    name: Critical ground equipment not ready
+    unit: items
+    unitClass: count
+    owner: ground-systems
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/equipment.csv, field: "#", where: {critical: "=yes", state: "!=ready"}}
+
+  - id: weather_holds
+    name: Holds for weather
+    unit: holds
+    unitClass: count
+    owner: range
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/holds.csv, field: "#(cause=weather)"}
+
+  - id: technical_holds
+    name: Holds for technical causes
+    unit: holds
+    unitClass: count
+    owner: ground-systems
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/holds.csv, field: "#(cause=technical)"}
+
+
+edges:
+  - {from: critical_equipment_not_ready, to: technical_holds, weight: 0.5, confidence: 0.4, why: launch attempts hold when critical ground equipment is not ready}
+  - {from: equipment_ready_ratio, to: pad_turnaround_p90_h, weight: -30, confidence: 0.3, why: turnaround stretches while equipment is repaired}
+  - {from: slots_held, to: slot_utilisation, weight: -0.1, confidence: 0.4, why: held slots are not available to book}
+
+actions:
+  - id: repair_ground_equipment
+    title: Repair the critical ground equipment
+    description: Prioritise repair of degraded and down critical equipment.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: critical_equipment_not_ready, change: -0.7, uncertainty: 0.3}
+      - {kpi: equipment_ready_ratio, change: 0.15, uncertainty: 0.3}
+
+  - id: rebook_held_slots
+    title: Rebook the held range slots
+    description: Offer held slots to the next customers on the manifest.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: slots_held, change: -0.6, uncertainty: 0.3}
+      - {kpi: slot_utilisation, change: 0.08, uncertainty: 0.3}
+
+  - id: request_range_window
+    title: Request an additional range window
+    description: Ask the range authority for an extra window to absorb a weather or technical hold. It affects other users of the range, so two approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 2
+    effects:
+      - {kpi: slots_held, change: -0.3, uncertainty: 0.4}
+

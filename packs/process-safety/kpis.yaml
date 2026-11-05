@@ -1,0 +1,130 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Lagging and leading process-safety indicators in the tiers used by API RP 754
+# (tier 1 and 2 loss-of-containment events; tier 3 and 4 challenges to safety
+# systems and weaknesses in them). Tiers 3 and 4 are defined by each company, so
+# the ones here (safety-system demands, overdue management-of-change items and
+# overdue proof tests) are examples, not the standard's list. The fixture/ files
+# are a small invented sample; point the file sources at your incident and
+# maintenance systems (same columns).
+name: process-safety
+
+kpis:
+  - id: tier1_events
+    name: Tier 1 process-safety events
+    unit: events
+    unitClass: count
+    owner: safety
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/events.csv, field: "#(tier=1)"}
+
+  - id: tier2_events
+    name: Tier 2 process-safety events
+    unit: events
+    unitClass: count
+    owner: safety
+    value: 0
+    target: 2
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/events.csv, field: "#(tier=2)"}
+
+  - id: overdue_moc
+    name: Overdue management-of-change items
+    unit: items
+    unitClass: count
+    owner: operations
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/moc.csv, field: "#", where: {state: "=open", overdue_days: ">0"}}
+
+  - id: oldest_overdue_moc_days
+    name: Oldest overdue change item
+    unit: d
+    unitClass: duration
+    owner: operations
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/moc.csv, field: "*.overdue_days", agg: max, where: {state: "=open"}}
+
+  - id: overdue_proof_tests
+    name: Safety devices past their proof-test date
+    unit: devices
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/prooftests.csv, field: "#", where: {due_in_days: "<0"}}
+
+  - id: sis_proof_tests_overdue
+    name: Safety-instrumented devices past their proof-test date
+    unit: devices
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/prooftests.csv, field: "#", where: {class: "=sis", due_in_days: "<0"}}
+
+  - id: safety_system_demands
+    name: Demands on safety systems
+    unit: demands
+    unitClass: count
+    owner: operations
+    value: 0
+    target: 2
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/demands.csv, field: "#"}
+
+
+edges:
+  - {from: overdue_proof_tests, to: safety_system_demands, weight: 0.3, confidence: 0.2, why: safety devices that are not proof tested are less trusted to hold the process, so demands are likelier to matter}
+  - {from: overdue_moc, to: tier2_events, weight: 0.2, confidence: 0.2, why: unreviewed changes are a recurring contributor to process-safety events}
+  - {from: safety_system_demands, to: tier2_events, weight: 0.1, confidence: 0.2, why: repeated demands show the process is being pushed to its protective limits}
+
+actions:
+  - id: schedule_overdue_proof_tests
+    title: Schedule the overdue proof tests
+    description: Book the overdue safety-device proof tests into the next available window, starting with safety-instrumented ones.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: overdue_proof_tests, change: -0.7, uncertainty: 0.3}
+      - {kpi: sis_proof_tests_overdue, change: -0.8, uncertainty: 0.3}
+
+  - id: close_overdue_change_items
+    title: Close out the overdue change items
+    description: Assign owners and dates to overdue management-of-change items.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: overdue_moc, change: -0.6, uncertainty: 0.3}
+      - {kpi: oldest_overdue_moc_days, change: -0.5, uncertainty: 0.4}
+
+  - id: stand_down_unit_for_review
+    title: Stand a unit down for a safety review
+    description: Pause a unit while its overdue items and demands are reviewed. This is an operating decision for your safety authority, so the pack records a proposal only and three approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 3
+    effects:
+      - {kpi: safety_system_demands, change: -0.4, uncertainty: 0.4}
+      - {kpi: tier2_events, change: -0.2, uncertainty: 0.5}
+

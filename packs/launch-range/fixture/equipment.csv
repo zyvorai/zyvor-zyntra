@@ -1,0 +1,6 @@
+item_id,state,critical
+e1,ready,yes
+e2,degraded,yes
+e3,ready,no
+e4,down,yes
+e5,ready,yes

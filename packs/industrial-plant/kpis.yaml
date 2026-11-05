@@ -1,0 +1,140 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Availability, yield, reliability and maintenance discipline for a plant, in the
+# spirit of ISO 22400 manufacturing KPIs. The fixture/ files are a small invented
+# sample; point the file sources at your MES and CMMS exports (same columns).
+# Targets and weights are starting points, not a standard. OEE needs the product
+# of availability, performance and quality; a pack cannot multiply KPIs yet, so
+# the parts are reported separately.
+name: industrial-plant
+
+kpis:
+  - id: machine_availability
+    name: Machine availability
+    unitClass: ratio
+    owner: production
+    value: 0
+    target: 0.85
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/machines.csv, field: "*.run_h", denominator: "*.planned_h"}
+
+  - id: first_pass_yield
+    name: First-pass yield
+    unitClass: ratio
+    owner: production
+    value: 0
+    target: 0.95
+    direction: higher
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/machines.csv, field: "*.good_units", denominator: "*.total_units"}
+
+  - id: machines_down
+    name: Machines down
+    unit: machines
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/machines.csv, field: "#(state=down)"}
+
+  - id: mtbf_avg_h
+    name: Mean time between failures
+    unit: h
+    unitClass: duration
+    owner: maintenance
+    value: 0
+    target: 150
+    direction: higher
+    min: 0
+    source: {kind: file, file: fixture/machines.csv, field: "*.mtbf_h", agg: avg}
+
+  - id: mttr_avg_h
+    name: Mean time to repair
+    unit: h
+    unitClass: duration
+    owner: maintenance
+    value: 0
+    target: 6
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/machines.csv, field: "*.mttr_h", agg: avg}
+
+  - id: pm_compliance
+    name: Preventive maintenance completed
+    unitClass: ratio
+    owner: maintenance
+    value: 0
+    target: 0.9
+    direction: higher
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/workorders.csv, field: "#(state=done)", denominator: "#", where: {type: "=preventive"}}
+
+  - id: overdue_pm
+    name: Overdue preventive work orders
+    unit: orders
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "#", where: {type: "=preventive", state: "=open", overdue_days: ">0"}}
+
+  - id: open_work_orders
+    name: Open work orders
+    unit: orders
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 2
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "#(state=open)"}
+
+
+edges:
+  - {from: machines_down, to: machine_availability, weight: -0.2, confidence: 0.6, why: a machine that is down contributes no run time}
+  - {from: overdue_pm, to: machines_down, weight: 0.3, confidence: 0.3, why: skipped preventive work raises the chance of a breakdown}
+  - {from: mttr_avg_h, to: machine_availability, weight: -0.01, confidence: 0.4, why: longer repairs keep machines down longer}
+  - {from: machines_down, to: first_pass_yield, weight: -0.02, confidence: 0.2, why: load moved to the remaining machines can hurt quality}
+
+actions:
+  - id: expedite_corrective_repair
+    title: Expedite the repair of the down machine
+    description: Put the repair at the front of the maintenance queue and call in the specialist.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: machines_down, change: -0.5, uncertainty: 0.3}
+      - {kpi: machine_availability, change: 0.05, uncertainty: 0.3}
+
+  - id: catch_up_preventive_maintenance
+    title: Catch up overdue preventive maintenance
+    description: Schedule the overdue preventive orders into the next planned stop.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: overdue_pm, change: -0.7, uncertainty: 0.3}
+      - {kpi: pm_compliance, change: 0.1, uncertainty: 0.3}
+
+  - id: shift_load_to_idle_line
+    title: Shift load to an idle line
+    description: Move work from the constrained line to an idle one. Changing the run plan affects schedules and quality checks, so two approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: first_pass_yield, max_worsen: 0.03, why: a shift must not cost more than three points of yield}
+    effects:
+      - {kpi: machine_availability, change: 0.04, uncertainty: 0.4}
+      - {kpi: first_pass_yield, change: -0.01, uncertainty: 0.4}
+

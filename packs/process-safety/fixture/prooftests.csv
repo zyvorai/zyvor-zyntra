@@ -1,0 +1,6 @@
+device_id,class,due_in_days
+d1,sis,-3
+d2,sis,20
+d3,relief,-10
+d4,alarm,5
+d5,sis,40

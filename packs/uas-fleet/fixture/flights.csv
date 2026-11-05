@@ -1,0 +1,7 @@
+flight_id,outcome,swap_min
+f1,ok,6
+f2,ok,8
+f3,failed_landing,7
+f4,ok,5
+f5,aborted,9
+f6,ok,6

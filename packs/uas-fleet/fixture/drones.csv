@@ -1,0 +1,6 @@
+drone_id,state,firmware_current
+d1,ready,yes
+d2,ready,no
+d3,maintenance,yes
+d4,grounded,no
+d5,ready,yes

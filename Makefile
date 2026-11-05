@@ -66,6 +66,10 @@ run-defence: build
 run-aviation: build
 	ZYNTRA_API_KEY=$${ZYNTRA_API_KEY:-dev} ./bin/zyntra serve -f packs/aviation-ops -f packs/aviation-mro -f packs/airport-ops -policy examples/policy-aviation.yaml
 
+# Industrial, drone and launch-range packs from their fixture CSVs.
+run-industrial: build
+	ZYNTRA_API_KEY=$${ZYNTRA_API_KEY:-dev} ./bin/zyntra serve -f packs/industrial-plant -f packs/process-safety -f packs/industrial-ot-security -f packs/uas-fleet -f packs/launch-range -policy examples/policy-industrial.yaml
+
 test-e2e: build
 	bash scripts/test-e2e.sh
 
