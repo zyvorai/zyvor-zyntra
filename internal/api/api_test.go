@@ -454,3 +454,44 @@ kpis:
 		t.Fatalf("unusable %v", out.Unusable)
 	}
 }
+
+// A server-wide WriteTimeout must not end the event stream: the handler
+// renews the write deadline before each pulse.
+func TestEventsOutlivesWriteTimeout(t *testing.T) {
+	f := setup(t, nil)
+	srv := httptest.NewUnstartedServer(f.s.Handler())
+	srv.Config.WriteTimeout = 300 * time.Millisecond
+	srv.Start()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/v1/events", nil)
+	req.Header.Set("Authorization", "Bearer k3y")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	start := time.Now()
+	sc := bufio.NewScanner(resp.Body)
+	sc.Buffer(make([]byte, 1<<20), 1<<20)
+	pulses := 0
+	for sc.Scan() && (pulses < 3 || time.Since(start) < 900*time.Millisecond) {
+		if strings.HasPrefix(sc.Text(), "event: pulse") {
+			pulses++
+		}
+	}
+	if time.Since(start) < 900*time.Millisecond || pulses < 3 {
+		t.Fatalf("stream ended after %v with %d pulses; the write timeout cut it off", time.Since(start), pulses)
+	}
+}
+
+func TestSSEWriteWindow(t *testing.T) {
+	if got := sseWriteWindow(time.Second); got != time.Minute {
+		t.Errorf("short interval: %v", got)
+	}
+	if got := sseWriteWindow(time.Hour); got != 3*time.Hour {
+		t.Errorf("long interval: %v", got)
+	}
+}

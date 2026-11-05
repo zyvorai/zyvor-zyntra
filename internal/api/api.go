@@ -677,7 +677,12 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	t := time.NewTicker(s.opt.Interval)
 	defer t.Stop()
+	rc := http.NewResponseController(w)
 	for {
+		// The server's WriteTimeout would end a long stream; renew the
+		// deadline before each write. Errors mean the writer has no
+		// deadline support, which is fine.
+		_ = rc.SetWriteDeadline(time.Now().Add(sseWriteWindow(s.opt.Interval)))
 		snap := s.aiSnapshot(r)
 		_, at := s.snapshotFor(r)
 		top := snap.Plan
@@ -704,6 +709,15 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 		case <-t.C:
 		}
 	}
+}
+
+// sseWriteWindow is how long one event write may take: a few intervals, never
+// under a minute, so a stalled client is dropped but a slow one is not.
+func sseWriteWindow(interval time.Duration) time.Duration {
+	if w := 3 * interval; w > time.Minute {
+		return w
+	}
+	return time.Minute
 }
 
 func (s *Server) handleAIStatus(w http.ResponseWriter, _ *http.Request) {
