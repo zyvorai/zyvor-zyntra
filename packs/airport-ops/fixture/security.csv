@@ -1,0 +1,6 @@
+lane_id,state,queue_min
+l1,open,6
+l2,open,14
+l3,closed,0
+l4,open,22
+l5,open,9

@@ -64,7 +64,7 @@ run-defence: build
 
 # Aviation packs from their fixture CSVs, with the two-person aviation policy.
 run-aviation: build
-	ZYNTRA_API_KEY=$${ZYNTRA_API_KEY:-dev} ./bin/zyntra serve -f packs/aviation-ops -f packs/aviation-mro -policy examples/policy-aviation.yaml
+	ZYNTRA_API_KEY=$${ZYNTRA_API_KEY:-dev} ./bin/zyntra serve -f packs/aviation-ops -f packs/aviation-mro -f packs/airport-ops -policy examples/policy-aviation.yaml
 
 test-e2e: build
 	bash scripts/test-e2e.sh

@@ -1,0 +1,45 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which turnarounds use which stands. Links say what depends on what; only
+# kpis.yaml predicts.
+name: airport-ops
+
+objects:
+  - name: Stand
+    kpis: [stands_blocked, stand_utilisation]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+  - name: Turnaround
+    kpis: [stand_turnaround_p90_min, taxi_out_extra_avg_min]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: turnaround_min, type: number}
+  - name: SecurityLane
+    kpis: [security_queue_p90_min, security_lanes_open]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+      - {name: queue_min, type: number}
+
+links:
+  - {name: uses_stand, from: Turnaround, to: Stand}
+
+mappings:
+  - source: fixture/stands.csv
+    type: Stand
+    namespace: apt
+    key: stand_id
+    props: {name: stand_id, state: state}
+  - source: fixture/turns.csv
+    type: Turnaround
+    namespace: apt
+    key: turn_id
+    props: {name: turn_id, turnaround_min: turnaround_min}
+    links: [{type: uses_stand, column: stand, to: Stand}]
+  - source: fixture/security.csv
+    type: SecurityLane
+    namespace: apt
+    key: lane_id
+    props: {name: lane_id, state: state, queue_min: queue_min}

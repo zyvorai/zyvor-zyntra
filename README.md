@@ -148,6 +148,7 @@ Sign in as `admin` / `Admin@321`. That account exists only while the policy file
 | Site reliability (SRE) | [`packs/sre`](packs/sre) | `./bin/zyntra plan -f packs/sre` |
 | Airline operations | [`packs/aviation-ops`](packs/aviation-ops) ([docs](docs/AVIATION.md)) | `./bin/zyntra plan -f packs/aviation-ops` |
 | Aircraft maintenance | [`packs/aviation-mro`](packs/aviation-mro) ([docs](docs/AVIATION.md)) | `./bin/zyntra plan -f packs/aviation-mro` |
+| Airport operations | [`packs/airport-ops`](packs/airport-ops) ([docs](docs/AVIATION.md)) | `./bin/zyntra plan -f packs/airport-ops` |
 
 A pack is a directory of files; a new industry is a new directory, not a project. `zyntra pack draft` drafts one from a sample export.
 

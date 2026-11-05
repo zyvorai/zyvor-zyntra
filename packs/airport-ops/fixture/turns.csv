@@ -1,0 +1,9 @@
+turn_id,stand,turnaround_min,taxi_out_extra_min
+t1,s1,40,2
+t2,s2,55,6
+t3,s1,35,1
+t4,s3,70,12
+t5,s2,45,3
+t6,s3,90,15
+t7,s4,50,4
+t8,s4,38,2

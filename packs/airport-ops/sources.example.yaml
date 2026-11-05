@@ -1,0 +1,13 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your airport operational
+# database, baggage system and queue sensors (same columns). Dry-run never
+# needs any variable.
+variables: []
+files:
+  - {path: fixture/turns.csv, description: "Turnarounds: turn_id, stand, turnaround_min (in-block to off-block), taxi_out_extra_min (taxi-out time above the unimpeded time)"}
+  - {path: fixture/stands.csv, description: "Stands: stand_id, state (occupied|free|blocked)"}
+  - {path: fixture/ctot.csv, description: "Flow-management slots: flight_id, adhered (yes|no)"}
+  - {path: fixture/baggage.csv, description: "Baggage: flight_id, last_bag_min (minutes from in-block to the last bag on the belt)"}
+  - {path: fixture/security.csv, description: "Security lanes: lane_id, state (open|closed), queue_min"}
