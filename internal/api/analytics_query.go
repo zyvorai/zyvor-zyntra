@@ -12,7 +12,7 @@ import (
 // Build a minimal catalog and history together. Neither source configuration,
 // provider metadata nor unauthorized metric names reach an answer or the LLM.
 func (s *Server) queryCatalog(r *http.Request) []ai.Metric {
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	tenant := auth.FromContext(r.Context()).Tenant
 	unavailable := s.analyticsUnavailable(m)
 	catalog := []ai.Metric{}

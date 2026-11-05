@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"github.com/zyvorai/zyntra/internal/marking"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,6 +43,11 @@ type OIDCConfig struct {
 	// set it is required: users without a valid tenant are refused, and
 	// tenant users cannot hold admin or executor roles.
 	TenantClaim string
+	// ClearanceMap maps groups to clearance levels. A user in several mapped
+	// groups gets the highest level in Scheme; one in none gets the lowest.
+	ClearanceMap map[string]string
+	// Scheme orders the levels. It is required when ClearanceMap is set.
+	Scheme *marking.Scheme
 }
 
 type oidcState struct {
@@ -70,11 +76,35 @@ func ParseRoleMap(s string) (map[string][]Role, error) {
 	return out, nil
 }
 
+// ParseClearanceMap reads "group=level,group2=level" (also ";"-separated).
+func ParseClearanceMap(s string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, item := range strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == ';' || r == '\n' }) {
+		g, lv, ok := strings.Cut(strings.TrimSpace(item), "=")
+		g, lv = strings.TrimSpace(g), strings.TrimSpace(lv)
+		if !ok || g == "" || !marking.Pattern.MatchString(lv) {
+			return nil, fmt.Errorf("clearance map entry %q must be group=level", item)
+		}
+		out[g] = lv
+	}
+	return out, nil
+}
+
 // EnableOIDC discovers the provider and turns on the OIDC routes. It must be
 // called before Routes.
 func (a *Auth) EnableOIDC(ctx context.Context, cfg OIDCConfig) error {
 	if cfg.Issuer == "" || cfg.ClientID == "" {
 		return fmt.Errorf("oidc needs an issuer and client id")
+	}
+	if len(cfg.ClearanceMap) > 0 {
+		if cfg.Scheme == nil {
+			return fmt.Errorf("oidc clearance map needs markings defined in the policy")
+		}
+		for g, lv := range cfg.ClearanceMap {
+			if _, ok := cfg.Scheme.Rank(lv); !ok {
+				return fmt.Errorf("oidc clearance map: group %q names unknown level %q", g, lv)
+			}
+		}
 	}
 	if cfg.GroupsClaim == "" {
 		cfg.GroupsClaim = "groups"
@@ -201,11 +231,24 @@ func (a *Auth) oidcCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if len(a.oidc.cfg.ClearanceMap) > 0 {
+		var levels []string
+		for _, g := range a.oidc.groups(claims) {
+			if lv, ok := a.oidc.cfg.ClearanceMap[g]; ok {
+				levels = append(levels, lv)
+			}
+		}
+		var cerr error
+		if id, cerr = id.WithClearance(a.oidc.cfg.Scheme.Highest(levels...)); cerr != nil {
+			a.oidcFail(w, http.StatusForbidden, "your clearance is not valid for this workspace")
+			return
+		}
+	}
 	a.setSession(w, r, id, SessionTTL)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (o *oidcState) roles(claims map[string]any) []Role {
+func (o *oidcState) groups(claims map[string]any) []string {
 	var groups []string
 	switch g := claims[o.cfg.GroupsClaim].(type) {
 	case []any:
@@ -217,8 +260,12 @@ func (o *oidcState) roles(claims map[string]any) []Role {
 	case string:
 		groups = strings.Fields(strings.ReplaceAll(g, ",", " "))
 	}
+	return groups
+}
+
+func (o *oidcState) roles(claims map[string]any) []Role {
 	var roles []Role
-	for _, g := range groups {
+	for _, g := range o.groups(claims) {
 		roles = append(roles, o.cfg.RoleMap[g]...)
 	}
 	if len(roles) == 0 && o.cfg.DefaultRole != RoleNone {

@@ -4,7 +4,6 @@ package api
 
 import (
 	"github.com/zyvorai/zyntra/internal/ai"
-	"github.com/zyvorai/zyntra/internal/auth"
 	"github.com/zyvorai/zyntra/internal/watch"
 	"net/http"
 	"time"
@@ -24,7 +23,7 @@ func (s *Server) handleIncidentInvestigation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var incident watch.Incident
-	for _, in := range s.opt.Watches.View(auth.FromContext(r.Context()).Tenant).Incidents {
+	for _, in := range s.watchView(r).Incidents {
 		if in.ID == r.PathValue("id") {
 			incident = in
 			break
@@ -34,7 +33,7 @@ func (s *Server) handleIncidentInvestigation(w http.ResponseWriter, r *http.Requ
 		writeErr(w, 404, "watch item not found")
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	target, ok := m.KPI(incident.Rule.Metric)
 	if !ok || target.Tenant != incident.Rule.Tenant || target.DisplayUnit() != incident.Rule.Unit {
 		writeErr(w, 409, "incident metric is unavailable or its tenant or unit has changed")

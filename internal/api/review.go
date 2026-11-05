@@ -74,7 +74,7 @@ func (s *Server) explainVerdict(p approvals.Proposal) {
 }
 
 func (s *Server) handleExplanation(w http.ResponseWriter, r *http.Request) {
-	p, err := s.opt.Store.Get(r.PathValue("id"))
+	p, err := s.proposalFor(r, r.PathValue("id"))
 	if err != nil {
 		writeErr(w, http.StatusNotFound, err.Error())
 		return
@@ -97,19 +97,19 @@ func (s *Server) handleExplanation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleProposalSimilar(w http.ResponseWriter, r *http.Request) {
-	p, err := s.opt.Store.Get(r.PathValue("id"))
+	p, err := s.proposalFor(r, r.PathValue("id"))
 	if err != nil {
 		writeErr(w, http.StatusNotFound, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, review.Similar(s.opt.Store.List(), p, 3))
+	writeJSON(w, http.StatusOK, review.Similar(s.markFilter(r, s.opt.Store.List()), p, 3))
 }
 
 // handleSimilar finds precedents for an action that has not been proposed
 // yet, from its simulation.
 func (s *Server) handleSimilar(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("action")
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	acts, err := resolveActions(m, strings.Split(id, "+")...)
 	if err != nil || id == "" {
 		writeErr(w, http.StatusBadRequest, "unknown action")
@@ -127,11 +127,11 @@ func (s *Server) handleSimilar(w http.ResponseWriter, r *http.Request) {
 			cur.Predicted.KPIs[k.KPI] = k.After
 		}
 	}
-	writeJSON(w, http.StatusOK, review.Similar(s.opt.Store.List(), cur, 3))
+	writeJSON(w, http.StatusOK, review.Similar(s.markFilter(r, s.opt.Store.List()), cur, 3))
 }
 
-func (s *Server) handleEdges(w http.ResponseWriter, _ *http.Request) {
-	m, _ := s.snapshot()
+func (s *Server) handleEdges(w http.ResponseWriter, r *http.Request) {
+	m, _ := s.snapshotFor(r)
 	edges := review.MissingEdges(m, s.opt.History.Snapshot())
 	if edges == nil {
 		edges = []review.EdgeProposal{}
@@ -141,7 +141,7 @@ func (s *Server) handleEdges(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleContradictions(w http.ResponseWriter, r *http.Request) {
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	readme := ""
 	if m.Dir != "" {
 		if b, err := os.ReadFile(filepath.Join(m.Dir, pack.Readme)); err == nil {
@@ -223,7 +223,7 @@ func (s *Server) shiftFacts(m *graph.Model, owner, window string, now time.Time)
 		return ok && (owner == "" || k.Owner == owner)
 	}
 	var latest *approvals.Proposal
-	for _, p := range s.opt.Store.List() {
+	for _, p := range s.shiftProposals(m) {
 		if p.Explanation == nil || p.Outcome == nil || p.Outcome.DecidedAt == nil {
 			continue
 		}
@@ -278,7 +278,7 @@ func verdictReady(p approvals.Proposal) bool {
 
 // handleCalibration backtests the model's edge weights against decisions that
 // ran and finished, and suggests corrections. It changes nothing.
-func (s *Server) handleCalibration(w http.ResponseWriter, _ *http.Request) {
-	m, _ := s.snapshot()
-	writeJSON(w, http.StatusOK, calibrate.Analyze(m, s.opt.Store.List(), calibrate.Options{}))
+func (s *Server) handleCalibration(w http.ResponseWriter, r *http.Request) {
+	m, _ := s.snapshotFor(r)
+	writeJSON(w, http.StatusOK, calibrate.Analyze(m, s.markFilter(r, s.opt.Store.List()), calibrate.Options{}))
 }

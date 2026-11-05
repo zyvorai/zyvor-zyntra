@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/zyvorai/zyntra/internal/marking"
 )
 
 // Property describes one field of an object type.
@@ -20,6 +22,9 @@ type Property struct {
 	Type      string `json:"type" yaml:"type"` // string, number, bool, time
 	Required  bool   `json:"required,omitempty" yaml:"required"`
 	Sensitive bool   `json:"sensitive,omitempty" yaml:"sensitive"`
+	// Marking is the property's data marking; empty is the default. A viewer
+	// whose clearance does not cover it never sees the property.
+	Marking string `json:"marking,omitempty" yaml:"marking"`
 }
 
 // ObjectType is a kind of business object such as Cluster or Service.
@@ -33,6 +38,9 @@ type ObjectType struct {
 	// type are the same thing (compared after normalising case, spacing
 	// and punctuation). Matches are queued for review, never merged.
 	Match string `json:"match,omitempty" yaml:"match"`
+	// Marking is the type's data marking; empty is the default. A viewer
+	// whose clearance does not cover it never sees objects of this type.
+	Marking string `json:"marking,omitempty" yaml:"marking"`
 }
 
 // LinkType is a named, directed relationship between two object types.
@@ -124,6 +132,29 @@ func (s *Schema) Validate() error {
 		}
 		if !cardinalities[l.Cardinality] {
 			errs = append(errs, fmt.Errorf("link %q: unknown cardinality %q", l.Name, l.Cardinality))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// CheckMarkings verifies every marking names a level of the scheme. A nil
+// scheme means markings are off, so any marking in the schema is an error:
+// it would otherwise be silently ignored.
+func (s *Schema) CheckMarkings(sc *marking.Scheme) error {
+	var errs []error
+	check := func(what, m string) {
+		switch {
+		case m == "":
+		case sc == nil:
+			errs = append(errs, fmt.Errorf("%s has marking %q but the policy defines no markings", what, m))
+		case !sc.Known(m):
+			errs = append(errs, fmt.Errorf("%s has unknown marking %q", what, m))
+		}
+	}
+	for _, o := range s.Objects {
+		check("object "+o.Name, o.Marking)
+		for _, p := range o.Properties {
+			check("property "+o.Name+"."+p.Name, p.Marking)
 		}
 	}
 	return errors.Join(errs...)

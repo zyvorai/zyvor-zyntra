@@ -13,6 +13,14 @@ maintenanceWindows:
     end: "24:00"
     timezone: UTC
 
+# Data markings, least restricted first. Mark a KPI, action, ontology type or
+# property with `marking: cui`; an account sees it only with `clearance: cui`
+# or higher (users below, or ZYNTRA_OIDC_CLEARANCE_MAP for OIDC). Anything
+# above a caller's clearance is removed from every response, administrators
+# included. Marking nothing changes nothing.
+markings:
+  levels: [unclassified, cui, cui-specified]
+
 rules:
   - name: baseline-two-person
     approvals: 2
@@ -32,3 +40,5 @@ revalidation:
   maxDrift: 0.3
 
 users: []
+# Example accounts (generate hashes with: zyntra hash-password < password.txt):
+#  - {name: ana, passwordHash: "$2a$12$...", roles: [viewer], clearance: cui}
