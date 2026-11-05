@@ -17,14 +17,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      # web/dist is embedded by the web package, so it must exist before vet and
+      # the Go tests can compile it.
+      - name: Build console and binary
+        run: make build
       - name: Format check
         run: test -z "$(gofmt -l .)"
       - name: Vet
         run: go vet ./...
       - name: Unit tests
         run: go test -race ./...
-      - name: Build console and binary
-        run: make build
       - name: Console tests
         run: npm test --prefix web
       - name: Shell lint
