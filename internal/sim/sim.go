@@ -221,6 +221,10 @@ func ApplyPlan(m *graph.Model, actions []graph.Action, opt Options) (Result, err
 	bounded := map[string]bool{}
 	for _, id := range order {
 		k, _ := m.KPI(id)
+		if k.Derived() {
+			derive(*k, after, eff, bounded, &res)
+			continue
+		}
 		r := rel[id]
 		for _, e := range in[id] {
 			d := eff[e.From]
@@ -392,4 +396,47 @@ func Pct(x float64) string {
 		return fmt.Sprintf("%+.2f%%", x*100)
 	}
 	return fmt.Sprintf("%+.1f%%", x*100)
+}
+
+// derive resolves a derived KPI once its inputs are. It follows them: when
+// none moved it keeps its value, otherwise it takes the formula's value at the
+// inputs' nominal outcome and its range from the corners of their ranges. A
+// range that cannot be bounded (a ratio whose denominator might reach zero)
+// keeps the value and is marked bounded, so the result is not presented as a
+// prediction. Effects and edges cannot target a derived KPI (Validate refuses
+// them), so there is nothing else to add.
+func derive(k graph.KPI, after, eff map[string]interval, bounded map[string]bool, res *Result) {
+	d := k.Derive
+	lo, nom, hi := make([]float64, len(d.Of)), make([]float64, len(d.Of)), make([]float64, len(d.Of))
+	moved := false
+	for i, in := range d.Of {
+		a := after[in]
+		lo[i], nom[i], hi[i] = a.lo, a.nom, a.hi
+		moved = moved || !eff[in].zero()
+	}
+	before := k.Value
+	keep := interval{before, before, before}
+	if !moved {
+		after[k.ID], eff[k.ID] = keep, interval{}
+		return
+	}
+	v, err := d.Eval(nom)
+	mn, mx, ok := d.EvalInterval(lo, hi)
+	if err != nil || !ok {
+		after[k.ID], eff[k.ID] = keep, interval{}
+		bounded[k.ID] = true
+		res.Trace = append(res.Trace, Step{To: k.ID,
+			Text: fmt.Sprintf("%s is derived from %s and cannot be bounded for this plan, so it is left at %.4g", k.ID, strings.Join(d.Of, ", "), before)})
+		return
+	}
+	clamp := func(x float64) float64 { return k.Clamp(x) }
+	cl := interval{clamp(math.Min(mn, v)), clamp(v), clamp(math.Max(mx, v))}
+	if cl.nom != v {
+		bounded[k.ID] = true
+	}
+	after[k.ID] = cl
+	dn := denom(before)
+	eff[k.ID] = interval{(cl.lo - before) / dn, (cl.nom - before) / dn, (cl.hi - before) / dn}
+	res.Trace = append(res.Trace, Step{To: k.ID, Delta: eff[k.ID].nom,
+		Text: fmt.Sprintf("%s is derived (%s of %s): %.4g -> %.4g", k.ID, d.Op, strings.Join(d.Of, ", "), before, cl.nom)})
 }

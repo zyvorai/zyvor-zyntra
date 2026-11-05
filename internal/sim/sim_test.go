@@ -235,3 +235,97 @@ func TestCriticalWeighting(t *testing.T) {
 		t.Fatalf("critical kpi should weigh more: weighted %v plain %v", r.WeightedImprovement(), r.Improvement())
 	}
 }
+
+const derivedModel = `
+kpis:
+  - {id: oee, value: 0.336, target: 0.65, direction: higher, min: 0, max: 1, derive: {op: product, of: [avail, perf, quality]}}
+  - {id: avail, value: 0.7, min: 0, max: 1}
+  - {id: perf, value: 0.8, min: 0, max: 1}
+  - {id: quality, value: 0.6, min: 0, max: 1}
+  - {id: spare, value: 5}
+actions:
+  - {id: repair, effects: [{kpi: avail, change: 0.2, uncertainty: 0.5}]}
+  - {id: elsewhere, effects: [{kpi: spare, change: 0.5}]}
+`
+
+func TestDerivedKPIFollowsItsInputsThroughAPlan(t *testing.T) {
+	m, err := graph.Parse([]byte(derivedModel))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := Simulate(m, "repair")
+	if err != nil {
+		t.Fatal(err)
+	}
+	k := after(r, "oee")
+	// avail 0.7 -> 0.84 (nominal), product with 0.8 and 0.6 = 0.4032.
+	if !near(k.After, 0.84*0.8*0.6) {
+		t.Errorf("oee after = %v, want %v", k.After, 0.84*0.8*0.6)
+	}
+	// The band comes from the input's band: avail 0.7*(1+0.2±0.1)=[0.77, 0.91].
+	if !near(k.Low, 0.77*0.8*0.6) || !near(k.High, 0.91*0.8*0.6) {
+		t.Errorf("oee band = [%v, %v], want [%v, %v]", k.Low, k.High, 0.77*0.8*0.6, 0.91*0.8*0.6)
+	}
+	if !near(k.Change, 0.84*0.8*0.6/0.336-1) {
+		t.Errorf("oee change = %v", k.Change)
+	}
+	if m.KPIs[0].Value != 0.336 {
+		t.Error("simulation mutated the model")
+	}
+	// An action that moves nothing the formula reads leaves it alone.
+	r, err = Simulate(m, "elsewhere")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := after(r, "oee"); k.After != 0.336 || k.Low != 0.336 || k.High != 0.336 {
+		t.Errorf("oee moved without an input moving: %+v", k)
+	}
+}
+
+func TestDerivedKPIIsClampedAndFlagsAnUnboundedRatio(t *testing.T) {
+	m, err := graph.Parse([]byte(`
+kpis:
+  - {id: capped, value: 0.9, min: 0, max: 1, derive: {op: sum, of: [a, b]}}
+  - {id: a, value: 0.5}
+  - {id: b, value: 0.4}
+  - {id: r, value: 2, derive: {op: ratio, of: [n, den]}}
+  - {id: n, value: 4}
+  - {id: den, value: 2}
+actions:
+  - {id: up, effects: [{kpi: a, change: 1}]}
+  - {id: wobbly, effects: [{kpi: den, change: -1, uncertainty: 0.5}]}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := Simulate(m, "up")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := after(r, "capped"); k.After != 1 || !k.Bounded {
+		t.Errorf("a derived value above its max must be held at it and flagged: %+v", k)
+	}
+	// den falls to 0 with a band around it: the ratio cannot be bounded, so it
+	// keeps its value and is flagged rather than reported as a prediction.
+	r, err = Simulate(m, "wobbly")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := after(r, "r"); k.After != 2 || !k.Bounded {
+		t.Errorf("an unbounded ratio must keep its value and be flagged: %+v", k)
+	}
+}
+
+func TestDerivedKPIWithAStaleInputIsStale(t *testing.T) {
+	m, err := graph.Parse([]byte(derivedModel))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := ApplyPlan(m, m.Actions[:1], Options{Unusable: map[string]bool{"oee": true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := after(r, "oee"); !k.Stale {
+		t.Errorf("a plan that moves a derived KPI whose inputs are stale must say so: %+v", k)
+	}
+}

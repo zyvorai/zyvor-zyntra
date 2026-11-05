@@ -6,7 +6,7 @@ name: industrial-plant
 
 objects:
   - name: Machine
-    kpis: [machine_availability, machines_down, mtbf_avg_h, mttr_avg_h]
+    kpis: [machine_availability, performance_rate, oee, machines_down, mtbf_avg_h, mttr_avg_h]
     properties:
       - {name: name, type: string, required: true}
       - {name: state, type: string}

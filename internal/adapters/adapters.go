@@ -48,10 +48,11 @@ func (c Config) now() time.Time {
 	return time.Now()
 }
 
-// Generic reports whether m has KPIs read by generic source kinds.
+// Generic reports whether m has KPIs read by generic source kinds, or KPIs
+// derived from other KPIs, which Refresh computes.
 func Generic(m *graph.Model) bool {
 	for _, k := range m.KPIs {
-		if k.Source != nil && k.Source.Generic() {
+		if k.Derived() || (k.Source != nil && k.Source.Generic()) {
 			return true
 		}
 	}
@@ -196,6 +197,7 @@ func Refresh(ctx context.Context, m *graph.Model, cfg Config) (Report, error) {
 		k.Value = v
 		rep.KPIs[k.ID] = KPIUpdate{OK: true}
 	}
+	errs = append(errs, deriveAll(m, &rep)...)
 	for i := range m.KPIs {
 		k := m.KPIs[i]
 		if k.Source == nil {
@@ -377,4 +379,57 @@ func (r *run) value(ctx context.Context, s graph.Source) (float64, bool, error) 
 		return v, true, err
 	}
 	return 0, true, fmt.Errorf("unknown source kind %q", s.Kind)
+}
+
+// deriveAll computes every derived KPI from its inputs, inputs first. A derived
+// KPI is only updated when every input has a current value: an input that
+// failed, is still warming up or is held outside its calendar window leaves the
+// derived value where it was and says why, so a formula never mixes a fresh
+// number with a stale one. Static inputs (no source) always count as current.
+func deriveAll(m *graph.Model, rep *Report) []error {
+	var derived bool
+	for _, k := range m.KPIs {
+		derived = derived || k.Derived()
+	}
+	if !derived {
+		return nil
+	}
+	order, err := m.TopoOrder()
+	if err != nil {
+		return []error{err}
+	}
+	idx := make(map[string]int, len(m.KPIs))
+	for i, k := range m.KPIs {
+		idx[k.ID] = i
+	}
+	var errs []error
+	for _, id := range order {
+		k := &m.KPIs[idx[id]]
+		if !k.Derived() {
+			continue
+		}
+		vals := make([]float64, len(k.Derive.Of))
+		var blocked *KPIUpdate
+		for i, in := range k.Derive.Of {
+			vals[i] = m.KPIs[idx[in]].Value
+			if u, ok := rep.KPIs[in]; ok && !u.OK && blocked == nil {
+				u := u
+				u.Error = "input " + in + " has no current value"
+				blocked = &u
+			}
+		}
+		if blocked != nil {
+			rep.KPIs[id] = KPIUpdate{Held: blocked.Held, Warming: blocked.Warming, Fallback: !blocked.Held && !blocked.Warming, Error: blocked.Error}
+			continue
+		}
+		v, err := k.Derive.Eval(vals)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("kpi %s: %w", id, err))
+			rep.KPIs[id] = KPIUpdate{Error: err.Error(), Fallback: true}
+			continue
+		}
+		k.Value = v
+		rep.KPIs[id] = KPIUpdate{OK: true}
+	}
+	return errs
 }

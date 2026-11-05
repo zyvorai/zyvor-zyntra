@@ -8,7 +8,7 @@ for a safety authority.
 
 | Pack | Answers | Based on |
 |---|---|---|
-| `industrial-plant` | Which machines and skipped maintenance are costing run time? | ISO 22400-style availability, yield, MTBF, MTTR and maintenance-compliance measures |
+| `industrial-plant` | Which machines and skipped maintenance are costing run time, and what is OEE? | ISO 22400-style availability, performance, yield, MTBF, MTTR and maintenance-compliance measures; OEE is a [derived KPI](REFERENCE.md#derived-kpis) |
 | `process-safety` | Where are safety barriers overdue? | The tier 1 to 4 idea in API RP 754; tiers 3 and 4 are company-defined and the ones here are examples |
 | `industrial-ot-security` | Which control assets are exposed, unmonitored or unpatched? | The zones-and-conduits idea behind IEC 62443; no security levels are assigned |
 | `uas-fleet` | Which aircraft and batteries limit a drone or eVTOL fleet? | Readiness, battery-cycle, firmware and landing-outcome tracking common to fleet tools |
@@ -48,7 +48,6 @@ defines an example plant-stop window. Combine it with the `markings:` and
 
 ## What it does not do yet
 
-OEE as a single figure (a pack cannot multiply KPIs), event classification
-against RP 754 thresholds, security-level assessment, regulatory reporting, and
-connectors for named historians, CMMS or fleet products. Certification of any
-kind is out of scope.
+Event classification against RP 754 thresholds, security-level assessment,
+regulatory reporting, and connectors for named historians, CMMS or fleet
+products. Certification of any kind is out of scope.

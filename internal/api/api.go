@@ -291,7 +291,7 @@ func (s *Server) RefreshOnce(ctx context.Context) {
 		observations := map[string]watch.Observation{}
 		for _, f := range s.freshness(m) {
 			k, ok := m.KPI(f.KPI)
-			if ok && s.opt.Refresh != nil && k.Live() && f.Status == freshness.Fresh && f.LastError == "" && f.LastSuccess != nil && !held[k.ID] {
+			if ok && s.opt.Refresh != nil && (k.Live() || k.Derived()) && f.Status == freshness.Fresh && f.LastError == "" && f.LastSuccess != nil && !held[k.ID] {
 				observations[k.ID] = watch.Observation{At: *f.LastSuccess, Value: k.Value, Valid: true, Tenant: k.Tenant}
 			}
 		}

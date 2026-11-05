@@ -13,13 +13,33 @@ package graph
 // price or depend on something the viewer cannot see.
 func (m *Model) Restrict(hideKPI func(KPI) bool, hideAction func(Action) bool) {
 	gone := map[string]bool{}
-	kept := m.KPIs[:0:0]
 	for _, k := range m.KPIs {
 		if hideKPI != nil && hideKPI(k) {
 			gone[k.ID] = true
-			continue
 		}
-		kept = append(kept, k)
+	}
+	// A derived KPI is a function of its inputs, so showing it would reveal
+	// them. It goes with any input that goes, and so does what is derived from
+	// it; repeat until nothing more is removed.
+	for changed := true; changed; {
+		changed = false
+		for _, k := range m.KPIs {
+			if k.Derive == nil || gone[k.ID] {
+				continue
+			}
+			for _, in := range k.Derive.Of {
+				if gone[in] {
+					gone[k.ID], changed = true, true
+					break
+				}
+			}
+		}
+	}
+	kept := m.KPIs[:0:0]
+	for _, k := range m.KPIs {
+		if !gone[k.ID] {
+			kept = append(kept, k)
+		}
 	}
 	m.KPIs = kept
 

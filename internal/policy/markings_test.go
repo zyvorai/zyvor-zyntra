@@ -77,3 +77,31 @@ func TestCheckModelValidatesMarkings(t *testing.T) {
 		t.Errorf("an unmarked model must pass with markings off: %v", err)
 	}
 }
+
+func TestCheckModelRequiresADerivedKPIToBeMarkedAtLeastAsHighAsItsInputs(t *testing.T) {
+	p, err := Parse("markings: {levels: [unclassified, cui, cui-specified]}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	build := func(derived string) *graph.Model {
+		m, err := graph.Parse([]byte(`
+kpis:
+  - {id: open, value: 1}
+  - {id: secret, value: 2, marking: cui}
+  - {id: d, value: 0, ` + derived + `, derive: {op: sum, of: [open, secret]}}
+`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	if err := p.CheckModel(build("marking: cui")); err != nil {
+		t.Errorf("a derived KPI at its inputs' highest marking should pass: %v", err)
+	}
+	if err := p.CheckModel(build("marking: cui-specified")); err != nil {
+		t.Errorf("a higher marking should pass: %v", err)
+	}
+	if err := p.CheckModel(build("owner: o")); err == nil || !strings.Contains(err.Error(), "derived from secret") {
+		t.Errorf("an unmarked KPI derived from a cui one must be refused: %v", err)
+	}
+}
