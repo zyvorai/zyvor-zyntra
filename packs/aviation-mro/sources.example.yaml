@@ -1,0 +1,10 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your maintenance information
+# system (same columns). Dry-run never needs any variable.
+variables: []
+files:
+  - {path: fixture/aircraft.csv, description: "Aircraft: tail, status (serviceable|aog|maintenance)"}
+  - {path: fixture/workorders.csv, description: "Work orders: wo_id, tail, kind (scheduled|unscheduled|deferred), state (open|closed), age_days, due_in_days (negative means overdue)"}
+  - {path: fixture/parts.csv, description: "Parts: part_id, aog_critical (yes|no), requested, filled, on_hand"}

@@ -1,0 +1,25 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Two-person approval for the aviation packs. Anything high-risk (tail swaps,
+# defect deferrals) needs three people, one of whom is not the proposer, and
+# input that is not stale. Approvals are time-boxed.
+rules:
+  - name: baseline-two-person
+    approvals: 2
+    distinctFromProposer: true
+    requireFresh: true
+    pendingExpiry: 12h
+    approvedExpiry: 2h
+
+  - name: high-risk-three-person
+    match: { risk: [high] }
+    approvals: 3
+    distinctFromProposer: true
+    requireFresh: true
+    approvedExpiry: 1h
+
+revalidation:
+  maxDrift: 0.2
+
+users: []

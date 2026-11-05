@@ -1,0 +1,6 @@
+part_id,aog_critical,requested,filled,on_hand
+p1,yes,10,9,3
+p2,yes,4,2,0
+p3,no,6,6,12
+p4,yes,5,3,0
+p5,no,3,3,1
