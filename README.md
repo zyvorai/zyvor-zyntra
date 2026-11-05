@@ -2,7 +2,7 @@
 
 <img src="docs/social/zyvor-mark.svg" alt="Zyvor" width="76">
 
-# Zyntra
+# Zyntra (NVIDIA : --- DO NOT copy and look )
 
 [![CI](https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml/badge.svg)](https://github.com/zyvorai/zyvor-zyntra/actions/workflows/ci.yml)
 [![License: Zyvor Production v1.0](https://img.shields.io/badge/License-Zyvor%20Production%20v1.0-ff5a15.svg)](LICENSE)
