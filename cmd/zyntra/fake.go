@@ -11,6 +11,8 @@ import (
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/zyvorai/zyntra/internal/fakedefence"
 )
 
 // fakeSources serves Netra-, Gravia-, Fabric- and Keep-shaped endpoints on
@@ -18,6 +20,9 @@ import (
 //
 //	ZYNTRA_NETRA_URL=http://ADDR ZYNTRA_GRAVIA_URL=http://ADDR
 //	ZYNTRA_FABRIC_URL=http://ADDR ZYNTRA_KEEP_URL=http://ADDR
+//
+// It also serves invented maintenance, supply and GRC exports under /defence
+// for examples/defence (bearer token fakedefence.Token).
 func fakeSources(ctx context.Context, addr string) error {
 	start := time.Now()
 	elapsed := func() float64 { return time.Since(start).Seconds() }
@@ -68,6 +73,9 @@ func fakeSources(ctx context.Context, addr string) error {
 	mux.HandleFunc("GET /v1/keep/status", func(w http.ResponseWriter, _ *http.Request) {
 		js(w, map[string]any{"keep_mode": true, "signature_required": true, "trusted_signers": 1, "fluxvm": map[string]any{"ready": true}})
 	})
+
+	// Invented maintenance, supply and GRC exports for examples/defence.
+	mux.Handle("/defence/", http.StripPrefix("/defence", fakedefence.Handler()))
 
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go func() {

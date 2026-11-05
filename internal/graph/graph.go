@@ -244,6 +244,22 @@ type Source struct {
 	// StaleAfter marks webhook-in and manual values stale once they are this
 	// old.
 	StaleAfter Duration `yaml:"staleAfter,omitempty" json:"stale_after,omitempty"`
+
+	// Next, for an http source with a JSON body, is the path in each page to
+	// the URL of the next page ("links.next", or "@odata\\.nextLink" for a
+	// key containing a dot). The URL must be on the same host. The lists from
+	// all pages are joined into one list, which field, where and agg then
+	// read, as for a CSV file.
+	Next string `yaml:"next,omitempty" json:"next,omitempty"`
+	// Items is the path to the list of records on each page. Empty means the
+	// page itself is the list.
+	Items string `yaml:"items,omitempty" json:"items,omitempty"`
+	// MaxPages caps paging (default 20, at most 100). Running past it is an
+	// error, never a silent truncation.
+	MaxPages int `yaml:"maxPages,omitempty" json:"max_pages,omitempty"`
+	// Retries is how many times a request that got HTTP 429 or 5xx is tried
+	// again (0 to 3), with a short growing pause.
+	Retries int `yaml:"retries,omitempty" json:"retries,omitempty"`
 }
 
 // Generic source kinds.
@@ -928,6 +944,18 @@ func validSource(k *KPI) error {
 	case SourceHTTP, SourceSheet:
 		if s.URL == "" {
 			return fmt.Errorf("kpi %q: %s source needs url", k.ID, s.Kind)
+		}
+		if s.Retries < 0 || s.Retries > 3 {
+			return fmt.Errorf("kpi %q: retries must be between 0 and 3", k.ID)
+		}
+		if s.MaxPages < 0 || s.MaxPages > 100 {
+			return fmt.Errorf("kpi %q: maxPages must be between 0 and 100", k.ID)
+		}
+		if s.Next != "" && s.Kind != SourceHTTP {
+			return fmt.Errorf("kpi %q: next paging works on http sources only", k.ID)
+		}
+		if (s.Items != "" || s.MaxPages != 0) && s.Next == "" {
+			return fmt.Errorf("kpi %q: items and maxPages need next", k.ID)
 		}
 	case SourceWebhookIn:
 		if !channelName.MatchString(s.Name) {

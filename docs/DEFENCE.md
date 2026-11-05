@@ -22,6 +22,26 @@ make run-defence     # all three packs with examples/policy-defence.yaml
 ./bin/zyntra plan -f packs/defence-sustainment
 ```
 
+## Live connector templates
+
+`examples/defence/` shows how to read maintenance, supply and GRC exports over
+HTTP instead of CSV files:
+
+- `kpis-http.yaml`: KPIs from three paged JSON exports (`next`, `items`,
+  `retries` on `http` sources; see "Source fields" in `REFERENCE.md`).
+- `ontology-rest.yaml`: business objects from the same export through the
+  `rest` connector.
+
+They are templates, not connectors for any product: change the URLs, list
+paths, paging links and field names to your systems. They are tested against
+invented exports served by `zyntra fake-sources` (under `/defence`, bearer
+token `fake-defence-token`) in the shapes common to REST APIs: a nested list
+with a `links.next` URL, OData's `value` and `@odata.nextLink`, and a list with
+`meta.next`. **Nothing has been run against a real maintenance, supply or GRC
+system**, and none of them is GCSS-Army, DLA or any other named system. Expect
+to adjust, and report what differs. Credentials stay in `${ZYNTRA_*}`
+variables; each source reads only the host it started on.
+
 ## Policy
 
 `examples/policy-defence.yaml` requires two approvers on every proposal, three

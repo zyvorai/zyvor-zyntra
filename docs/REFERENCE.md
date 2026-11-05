@@ -134,6 +134,10 @@ actions:
 | `headers` | Request headers for `http` and `sheet` |
 | `name` | The `webhook-in` channel (`POST /api/v1/ingest/<name>`) |
 | `staleAfter` | Age after which a `webhook-in` or `manual` value is stale |
+| `next` | `http` only: JSON path to the next page's URL (`links.next`; `'@odata\.nextLink'` for a key containing a dot). It must be on the same host as `url`, so credentials in `headers` never follow a link elsewhere |
+| `items` | With `next`: JSON path to the list on each page. The lists are joined into one list that `field`, `where` and `agg` read like a CSV; empty means the page itself is the list |
+| `maxPages` | With `next`: page cap (default 20, at most 100). Going past it is an error, never a silent truncation. A next link that repeats an earlier page is an error too |
+| `retries` | `http` and `sheet`: how many times to retry after HTTP 429 or 5xx (0 to 3), pausing 250 ms and doubling, or for `Retry-After` (at most 5 s). Other failures, including timeouts and 4xx answers, are not retried |
 
 Webhook bodies resolve `kpi:<id>` to the live value and `gap:<id>` to the gap (value, target, severity). File content is a Go template with `.Action`, `.KPIs`, `.Gaps`, `.Date`, `.Time` and `.Stamp`, plus `pct` and `num`; a missing key is an error, not an empty string.
 
