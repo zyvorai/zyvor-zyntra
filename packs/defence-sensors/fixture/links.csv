@@ -1,0 +1,4 @@
+link_id,site_id,state
+l-1,site-a,up
+l-2,site-b,degraded
+l-3,site-c,up

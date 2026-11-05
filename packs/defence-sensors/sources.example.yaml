@@ -1,0 +1,12 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your sensor-management and
+# network tools (same columns). Dry-run never needs any variable. Only ids,
+# states and counts are read: keep coordinates and classified detail out.
+variables: []
+files:
+  - {path: fixture/sensors.csv, description: "Sensors: sensor_id, site_id, kind, state (up|down), latency_ms, track_quality, false_tracks, tracks"}
+  - {path: fixture/links.csv, description: "Links: link_id, site_id, state (up|degraded|down)"}
+  - {path: fixture/spares.csv, description: "Spares: spare_id, kind, on_hand"}
+  - {path: fixture/sites.csv, description: "Sites: site_id, name"}

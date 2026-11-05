@@ -1,0 +1,111 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Health of a sensor network and its links: uptime, track latency, track
+# quality, false-track load and spares. This pack watches equipment. It does
+# not classify, target or engage anything, and its actions only ask people to
+# service equipment. The fixture/ files are an invented sample.
+name: defence-sensors
+
+kpis:
+  - id: sensor_uptime
+    name: Sensor uptime
+    unitClass: ratio
+    owner: operations
+    value: 0
+    target: 0.95
+    direction: higher
+    criticality: critical
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/sensors.csv, field: "#(state=up)", denominator: "#"}
+
+  - id: track_latency_ms
+    name: Track latency
+    unit: ms
+    unitClass: duration
+    owner: operations
+    value: 0
+    target: 150
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/sensors.csv, field: "*.latency_ms", where: {state: up}, agg: avg}
+
+  - id: track_quality
+    name: Track quality
+    unitClass: ratio
+    owner: operations
+    value: 0
+    target: 0.85
+    direction: higher
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/sensors.csv, field: "*.track_quality", where: {state: up}, agg: avg}
+
+  - id: false_track_rate
+    name: False-track rate
+    unitClass: ratio
+    owner: operations
+    value: 0
+    target: 0.05
+    direction: lower
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/sensors.csv, field: "*.false_tracks", denominator: "*.tracks"}
+
+  - id: link_availability
+    name: Link availability
+    unitClass: ratio
+    owner: operations
+    value: 0
+    target: 0.95
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/links.csv, field: "#(state=up)", denominator: "#"}
+
+  - id: spares_out_of_stock
+    name: Spare kinds with none on hand
+    unit: kinds
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/spares.csv, field: "#(on_hand=0)"}
+
+edges:
+  - {from: spares_out_of_stock, to: sensor_uptime, weight: -0.05, confidence: 0.4, why: a failed sensor without a spare stays down}
+  - {from: link_availability, to: track_latency_ms, weight: -20, confidence: 0.3, why: degraded links delay tracks}
+  - {from: sensor_uptime, to: track_quality, weight: 0.2, confidence: 0.4, why: fewer sensors reporting means thinner coverage}
+
+actions:
+  - id: dispatch_repair_crew
+    title: Dispatch a repair crew to the down sensor
+    description: Send a maintenance crew to restore the sensor that is down.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: sensor_uptime, change: 0.1, uncertainty: 0.3}
+
+  - id: requisition_spares
+    title: Requisition missing spares
+    description: Order spare kinds that have none on hand.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: spares_out_of_stock, change: -0.8, uncertainty: 0.3}
+
+  - id: recalibrate_sensor
+    title: Take a sensor offline to recalibrate
+    description: Recalibrate to cut false tracks; the sensor is unavailable meanwhile, so two approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: sensor_uptime, max_worsen: 0.1, why: recalibration must not leave coverage thin}
+    effects:
+      - {kpi: false_track_rate, change: -0.4, uncertainty: 0.4}
+      - {kpi: sensor_uptime, change: -0.05, uncertainty: 0.2}

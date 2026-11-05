@@ -1,0 +1,11 @@
+control_id,family,status,evidence_age_days,stale
+3.1.1,AC,implemented,30,no
+3.1.2,AC,implemented,45,no
+3.3.1,AU,implemented,20,no
+3.4.1,CM,partial,200,yes
+3.5.3,IA,implemented,15,no
+3.6.1,IR,partial,150,no
+3.8.9,MP,planned,400,yes
+3.13.11,SC,implemented,60,no
+3.14.1,SI,implemented,25,no
+3.12.4,CA,implemented,10,no

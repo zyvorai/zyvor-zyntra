@@ -58,6 +58,10 @@ run-shop: build
 	ZYNTRA_POS_URL=http://127.0.0.1:9099/pos ZYNTRA_ERP_URL=http://127.0.0.1:9099/erp \
 	ZYNTRA_API_KEY=$${ZYNTRA_API_KEY:-dev} ./bin/zyntra serve -f packs/shop; kill %1
 
+# Defence packs from their fixture CSVs, with the two-person defence policy.
+run-defence: build
+	ZYNTRA_API_KEY=$${ZYNTRA_API_KEY:-dev} ./bin/zyntra serve -f packs/defence-sustainment -f packs/defence-compliance -f packs/defence-sensors -policy examples/policy-defence.yaml
+
 test-e2e: build
 	bash scripts/test-e2e.sh
 

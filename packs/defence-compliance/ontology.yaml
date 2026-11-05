@@ -1,0 +1,41 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which controls have open plan items. Links say what depends on what; only
+# kpis.yaml predicts.
+name: defence-compliance
+
+objects:
+  - name: Control
+    kpis: [controls_implemented_ratio, controls_stale_evidence]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: family, type: string}
+      - {name: status, type: string}
+  - name: PoamItem
+    kpis: [poam_open_items]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+
+links:
+  - {name: remediates, from: PoamItem, to: Control}
+
+mappings:
+  - {source: fixture/controls.csv, type: Control, namespace: grc, key: control_id, props: {name: control_id, family: family, status: status}}
+  - source: fixture/poam.csv
+    type: PoamItem
+    namespace: grc
+    key: item_id
+    props: {name: item_id, state: state}
+    links: [{type: remediates, column: control_id, to: Control}]
+
+actions:
+  - id: close_poam_items
+    inputs: [{name: item, object_type: PoamItem, required: true}]
+    affects: [Control]
+    outcome: [{object_type: PoamItem, must_be_safe: true}]
+
+views:
+  - {id: controls, title: Controls, type: Control, columns: [name, family, status]}
+  - {id: poam, title: POA&M items, type: PoamItem, columns: [name, state], actions: [close_poam_items]}

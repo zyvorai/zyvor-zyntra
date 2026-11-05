@@ -1,0 +1,66 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which assets are grounded behind which parts, depots and suppliers.
+# Links say what depends on what; only kpis.yaml predicts.
+name: defence-sustainment
+
+objects:
+  - name: Depot
+    kpis: [depot_open_workorders, maintenance_turnaround_days]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: region, type: string, sensitive: true}
+  - name: Supplier
+    kpis: [parts_fill_rate]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: tier, type: string}
+  - name: Asset
+    kpis: [mission_capable_rate]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: platform, type: string}
+      - {name: status, type: string, sensitive: true}
+  - name: Part
+    kpis: [stockout_risk_parts]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: on_hand, type: number}
+
+links:
+  - {name: held_at, from: Asset, to: Depot}
+  - {name: needs_part, from: Asset, to: Part}
+  - {name: supplied_by, from: Part, to: Supplier}
+
+mappings:
+  - {source: fixture/depots.csv, type: Depot, namespace: lms, key: depot_id, props: {name: name, region: region}}
+  - {source: fixture/suppliers.csv, type: Supplier, namespace: lms, key: supplier_id, props: {name: name, tier: tier}}
+  - source: fixture/assets.csv
+    type: Asset
+    namespace: lms
+    key: asset_id
+    props: {name: asset_id, platform: platform, status: status}
+    links: [{type: held_at, column: depot_id, to: Depot}]
+  - source: fixture/parts.csv
+    type: Part
+    namespace: lms
+    key: part_id
+    props: {name: part_id, on_hand: on_hand}
+    links: [{type: supplied_by, column: supplier_id, to: Supplier}]
+  - source: fixture/parts.csv
+    type: Asset
+    namespace: lms
+    key: asset_id
+    props: {}
+    links: [{type: needs_part, column: part_id, to: Part}]
+
+actions:
+  - id: expedite_critical_parts
+    inputs: [{name: part, object_type: Part, required: true}]
+    affects: [Asset]
+    outcome: [{object_type: Part, must_be_safe: true}]
+
+views:
+  - {id: assets, title: Assets, type: Asset, columns: [name, platform]}
+  - {id: parts, title: Parts, type: Part, columns: [name, on_hand], actions: [expedite_critical_parts]}

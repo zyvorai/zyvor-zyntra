@@ -1,0 +1,5 @@
+vuln_id,severity,state,age_days
+v-1,critical,open,12
+v-2,critical,open,35
+v-3,high,open,20
+v-4,medium,closed,5

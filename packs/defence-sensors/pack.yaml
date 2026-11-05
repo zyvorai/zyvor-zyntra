@@ -1,0 +1,8 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+id: defence-sensors
+title: Sensor and link health
+industry: defence
+version: 0.1.0
+owners: [operations, maintenance]
+timezone: UTC

@@ -1,0 +1,113 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Evidence-based view of NIST SP 800-171 Rev. 2 readiness for a CMMC Level 2
+# assessment. The fixture/ files are an invented sample of 10 of the 110
+# controls; point the file sources at your GRC and SIEM exports. Stale
+# evidence blocks approval, so a plan never rests on out-of-date attestations.
+# Weights are starting points, not truth.
+name: defence-compliance
+
+kpis:
+  - id: controls_implemented_ratio
+    name: Controls implemented
+    unitClass: ratio
+    owner: compliance
+    value: 0
+    target: 1
+    direction: higher
+    criticality: critical
+    min: 0
+    max: 1
+    freshness: {maxAge: 24h}
+    source: {kind: file, file: fixture/controls.csv, field: "#(status=implemented)", denominator: "#"}
+
+  - id: controls_stale_evidence
+    name: Controls with evidence older than 180 days
+    unit: controls
+    unitClass: count
+    owner: compliance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/controls.csv, field: "#(stale=yes)"}
+
+  - id: poam_open_items
+    name: Open POA&M items
+    unit: items
+    unitClass: count
+    owner: compliance
+    value: 0
+    target: 2
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/poam.csv, field: "#(state=open)"}
+
+  - id: critical_vuln_age_days
+    name: Oldest open critical vulnerability
+    unit: d
+    unitClass: duration
+    owner: security
+    value: 0
+    target: 15
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/vulns.csv, field: "*.age_days", where: {severity: critical, state: open}, agg: max}
+
+  - id: cui_access_anomaly_rate
+    name: CUI store access anomaly rate
+    unitClass: ratio
+    owner: security
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/cui_access.csv, field: "#(anomalous=yes)", denominator: "#"}
+
+  - id: assessment_days_remaining
+    name: Days until the assessment certificate expires
+    unit: d
+    unitClass: duration
+    owner: compliance
+    value: 400
+    target: 180
+    direction: higher
+    min: 0
+    source: {kind: manual, staleAfter: 720h}
+
+edges:
+  - {from: poam_open_items, to: controls_implemented_ratio, weight: -0.05, confidence: 0.5, why: open plan items are controls not yet implemented}
+  - {from: controls_stale_evidence, to: controls_implemented_ratio, weight: -0.03, confidence: 0.4, why: stale evidence puts a control's status in doubt}
+  - {from: critical_vuln_age_days, to: cui_access_anomaly_rate, weight: 0.002, confidence: 0.3, why: unpatched systems raise the chance of anomalous access}
+
+actions:
+  - id: refresh_control_evidence
+    title: Collect fresh evidence for stale controls
+    description: Assign control owners to re-collect and re-date evidence.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: controls_stale_evidence, change: -0.8, uncertainty: 0.2}
+
+  - id: close_poam_items
+    title: Close the oldest POA&M items
+    description: Assign remediation owners and dates to the oldest open items.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: poam_open_items, change: -0.5, uncertainty: 0.3}
+      - {kpi: controls_implemented_ratio, change: 0.1, uncertainty: 0.3}
+
+  - id: emergency_patch_critical
+    title: Emergency-patch open critical vulnerabilities
+    description: Patch outside the normal window; needs two approvers.
+    adapter: noop
+    risk: high
+    approvers: 2
+    effects:
+      - {kpi: critical_vuln_age_days, change: -0.7, uncertainty: 0.3}

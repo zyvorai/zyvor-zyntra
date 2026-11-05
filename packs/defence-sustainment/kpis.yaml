@@ -1,0 +1,142 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Fleet readiness, parts supply and depot maintenance load. The fixture/ files
+# are a small invented sample; point the file sources at your maintenance and
+# supply system exports (same columns). Weights are starting points, not truth.
+name: defence-sustainment
+
+kpis:
+  - id: mission_capable_rate
+    name: Mission-capable rate
+    unitClass: ratio
+    owner: maintenance
+    value: 0
+    target: 0.8
+    direction: higher
+    criticality: critical
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/assets.csv, field: "#(status=fmc)", denominator: "#"}
+
+  - id: nmc_supply_rate
+    name: Not mission-capable, supply
+    unitClass: ratio
+    owner: supply
+    value: 0
+    target: 0.05
+    direction: lower
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/assets.csv, field: "#(status=nmcs)", denominator: "#"}
+
+  - id: predicted_failure_backlog
+    name: Assets with a predicted failure
+    unit: assets
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/assets.csv, field: "#(predicted_failure=yes)"}
+
+  - id: mtbf_hours
+    name: Mean time between failures
+    unit: h
+    unitClass: duration
+    owner: maintenance
+    value: 0
+    target: 300
+    direction: higher
+    min: 0
+    source: {kind: file, file: fixture/assets.csv, field: "*.mtbf_h", agg: avg}
+
+  - id: parts_fill_rate
+    name: Parts fill rate
+    unitClass: ratio
+    owner: supply
+    value: 0
+    target: 0.9
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/parts.csv, field: "*.filled", denominator: "*.requested"}
+
+  - id: stockout_risk_parts
+    name: Parts with zero on hand
+    unit: parts
+    unitClass: count
+    owner: supply
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/parts.csv, field: "#(on_hand=0)"}
+
+  - id: depot_open_workorders
+    name: Open depot work orders
+    unit: orders
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 3
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "#(state=open)"}
+
+  - id: maintenance_turnaround_days
+    name: Work order age
+    unit: d
+    unitClass: duration
+    owner: maintenance
+    value: 0
+    target: 5
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "*.age_days", agg: avg}
+
+  - id: fuel_variance_pct
+    name: Worst fuel-loss variance
+    unit: "%"
+    owner: logistics
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/fuel.csv, field: "*.variance_pct", agg: max}
+
+edges:
+  - {from: parts_fill_rate, to: nmc_supply_rate, weight: -0.5, confidence: 0.6, why: unfilled requests keep assets down waiting for parts}
+  - {from: nmc_supply_rate, to: mission_capable_rate, weight: -0.8, confidence: 0.7, why: supply-grounded assets are not mission capable}
+  - {from: depot_open_workorders, to: mission_capable_rate, weight: -0.02, confidence: 0.5, why: assets in the depot are not available}
+  - {from: predicted_failure_backlog, to: depot_open_workorders, weight: 0.5, confidence: 0.4, why: predicted failures turn into work orders}
+
+actions:
+  - id: expedite_critical_parts
+    title: Expedite parts for grounded assets
+    description: Raise priority on requisitions for assets waiting on parts.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: nmc_supply_rate, change: -0.4, uncertainty: 0.3}
+      - {kpi: parts_fill_rate, change: 0.1, uncertainty: 0.3}
+
+  - id: reprioritise_depot_queue
+    title: Reprioritise the depot work-order queue
+    description: Move assets with a predicted failure ahead of routine work.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: maintenance_turnaround_days, change: -0.2, uncertainty: 0.3}
+      - {kpi: predicted_failure_backlog, change: -0.3, uncertainty: 0.4}
+
+  - id: reroute_fuel_resupply
+    title: Reroute fuel resupply and audit the high-variance site
+    description: Send a resupply and an audit team to the site with the worst loss variance.
+    adapter: noop
+    risk: high
+    effects:
+      - {kpi: fuel_variance_pct, change: -0.5, uncertainty: 0.4}
