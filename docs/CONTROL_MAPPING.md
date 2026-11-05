@@ -28,7 +28,7 @@ defaults these rows assume.
 | Tenant isolation, deny by default | partial | `internal/api/tenant.go`. The KPI graph is shared across tenants, and admin and executor are deployment-wide (`docs/ONTOLOGY.md`, "Tenants and connector credentials") |
 | Limit access to sensitive object properties | partial | The ontology `sensitive` flag is admin-only. There are no clearance levels or markings yet |
 | Session lock, session termination | partial | Signed cookie with a 12 hour lifetime (7 days with remember-me) in `internal/auth/auth.go`. There is no idle timeout |
-| Control remote access, encrypt remote sessions | delegated | The console listener is plain HTTP; terminate TLS at your ingress (`SECURITY.md`) |
+| Control remote access, encrypt remote sessions | partial | The console serves HTTPS itself when `ZYNTRA_TLS_CERT` and `ZYNTRA_TLS_KEY` are set (`cmd/zyntra/serve.go`, certificates reloaded by `internal/tlsutil/reload.go`); without them it is plain HTTP and you terminate TLS at your ingress (`SECURITY.md`). Server timeouts bound idle and slow connections |
 | Control the flow of CUI | partial | Optional `markings:` and `egress:` policy blocks (see DEFENCE.md) hide marked data from lower clearances and limit outbound destinations. Enforced inside one instance only; see "Out of scope today" below |
 
 ## 3.2 Awareness and training (AT)
@@ -112,7 +112,7 @@ defaults these rows assume.
 
 | Control | Status | Evidence and notes |
 |---|---|---|
-| Encrypt in transit | partial | TLS 1.2 minimum and a private CA for the Keep listener (`internal/tlsutil/tlsutil.go`); outbound clients verify certificates unless you set `ZYNTRA_ENDPOINT_INSECURE`. The main console listener is HTTP, so terminate TLS at the ingress |
+| Encrypt in transit | partial | TLS 1.2 minimum and a private CA for the Keep listener (`internal/tlsutil/tlsutil.go`); outbound clients verify certificates unless you set `ZYNTRA_ENDPOINT_INSECURE`. The console listener serves HTTPS when `ZYNTRA_TLS_CERT` and `ZYNTRA_TLS_KEY` are set (`cmd/zyntra/serve.go`); otherwise it is HTTP and TLS is terminated at the ingress |
 | Boundary protection, deny by default network | partial | Optional `networkPolicy` in `deploy/helm/zyntra/values.yaml`. Optional `egress:` policy restricts webhook, source, AI, Keep and notify destinations (`internal/egress`), checked at dial time; with no `egress:` block, configured URLs are followed as before |
 | Protect secrets | provided | Only `${ZYNTRA_*}` variables expand, Zyntra's own credentials are reserved (`internal/envx/envx.go`); credentials are not sent to a different host on redirect or paging (`internal/connector/rest.go`, `internal/notify/notify.go`) |
 | Cryptographic key management | partial | Signing key and session secret are generated and kept in the state dir; there is no rotation tooling or HSM support |

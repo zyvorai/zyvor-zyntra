@@ -677,6 +677,7 @@ func serve(ctx context.Context, c *common, addr string, interval time.Duration, 
 	var servers []*http.Server
 	if first.execFiles.CA != "" {
 		es := &http.Server{Addr: first.execAddr, Handler: first.srv.ExecHandler(), ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout: consoleReadTimeout, WriteTimeout: consoleWriteTimeout, IdleTimeout: consoleIdleTimeout,
 			TLSConfig: &tls.Config{Certificates: []tls.Certificate{first.execCert}, MinVersion: tls.VersionTLS12}}
 		servers = append(servers, es)
 		go func() {
@@ -687,7 +688,10 @@ func serve(ctx context.Context, c *common, addr string, interval time.Duration, 
 		}()
 	}
 
-	srv := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	srv, useTLS, err := newConsoleServer(addr, handler, env("ZYNTRA_TLS_CERT", ""), env("ZYNTRA_TLS_KEY", ""))
+	if err != nil {
+		return err
+	}
 	servers = append(servers, srv)
 	go func() {
 		<-ctx.Done()
@@ -701,7 +705,13 @@ func serve(ctx context.Context, c *common, addr string, interval time.Duration, 
 		log.Printf("zyntra %s serving %q on %s (approvals %s, execute %s, ai %s)", version, r.m.Name, addr,
 			r.opts.ApprovalMode, r.mode, r.engine.Status().Mode)
 	}
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if useTLS {
+		log.Printf("console on https://%s (certificate from ZYNTRA_TLS_CERT, re-read on change)", addr)
+		err = srv.ListenAndServeTLS("", "")
+	} else {
+		err = srv.ListenAndServe()
+	}
+	if err != nil && err != http.ErrServerClosed {
 		return err
 	}
 	for _, r := range runs {
