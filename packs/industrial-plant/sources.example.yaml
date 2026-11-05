@@ -1,0 +1,9 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your MES and maintenance system (same columns). Dry-run never needs
+# any variable.
+variables: []
+files:
+  - {path: fixture/machines.csv, description: "Machines: machine_id, state (running|down|idle), planned_h, run_h, good_units, total_units, mtbf_h, mttr_h"}
+  - {path: fixture/workorders.csv, description: "Work orders: wo_id, type (preventive|corrective), state (open|done), overdue_days"}

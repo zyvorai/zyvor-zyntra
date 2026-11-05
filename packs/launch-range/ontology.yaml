@@ -1,0 +1,27 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Links say what depends on what; only kpis.yaml predicts.
+name: launch-range
+
+objects:
+  - name: Pad
+    kpis: [pad_turnaround_p90_h]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: turnaround_h, type: number}
+  - name: GroundEquipment
+    kpis: [equipment_ready_ratio, critical_equipment_not_ready]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+  - name: RangeSlot
+    kpis: [slot_utilisation, slots_held]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+
+mappings:
+  - {source: fixture/pads.csv, type: Pad, namespace: rng, key: pad_id, props: {name: pad_id, turnaround_h: turnaround_h}}
+  - {source: fixture/equipment.csv, type: GroundEquipment, namespace: rng, key: item_id, props: {name: item_id, state: state}}
+  - {source: fixture/slots.csv, type: RangeSlot, namespace: rng, key: slot_id, props: {name: slot_id, state: state}}

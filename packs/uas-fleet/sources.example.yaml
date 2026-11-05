@@ -1,0 +1,10 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your fleet-management system (same columns). Dry-run never needs
+# any variable.
+variables: []
+files:
+  - {path: fixture/drones.csv, description: "Aircraft: drone_id, state (ready|maintenance|grounded), firmware_current (yes|no)"}
+  - {path: fixture/batteries.csv, description: "Batteries: battery_id, cycles, resistance_mohm"}
+  - {path: fixture/flights.csv, description: "Flights: flight_id, outcome (ok|failed_landing|aborted), swap_min (minutes to turn the aircraft around)"}

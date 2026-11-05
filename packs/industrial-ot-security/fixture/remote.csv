@@ -1,0 +1,4 @@
+session_id,vendor,approved,duration_min
+s1,v1,yes,30
+s2,v2,no,120
+s3,v1,yes,45

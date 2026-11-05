@@ -1,0 +1,117 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Fleet readiness, battery health, firmware currency and landing outcomes for a
+# drone or eVTOL operator. The fixture/ files are a small invented sample; point
+# the file sources at your fleet-management exports (same columns). Battery limits
+# are examples: use the manufacturer's. Targets and weights are starting points,
+# not a standard.
+name: uas-fleet
+
+kpis:
+  - id: fleet_ready_rate
+    name: Aircraft ready to fly
+    unitClass: ratio
+    owner: flight-ops
+    value: 0
+    target: 0.8
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/drones.csv, field: "#(state=ready)", denominator: "#"}
+
+  - id: firmware_out_of_date
+    name: Aircraft on old firmware
+    unit: aircraft
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/drones.csv, field: "#(firmware_current=no)"}
+
+  - id: batteries_over_cycle_limit
+    name: Batteries over 300 cycles
+    unit: batteries
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/batteries.csv, field: "#", where: {cycles: ">300"}}
+
+  - id: battery_resistance_max_mohm
+    name: Highest battery internal resistance
+    unit: mOhm
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 30
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/batteries.csv, field: "*.resistance_mohm", agg: max}
+
+  - id: failed_landing_rate
+    name: Failed-landing rate
+    unitClass: ratio
+    owner: flight-ops
+    value: 0
+    target: 0.02
+    direction: lower
+    criticality: critical
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/flights.csv, field: "#(outcome=failed_landing)", denominator: "#"}
+
+  - id: swap_turnaround_p90_min
+    name: Aircraft turnaround, 90th percentile
+    unit: min
+    unitClass: duration
+    owner: flight-ops
+    value: 0
+    target: 8
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/flights.csv, field: "*.swap_min", agg: p90}
+
+
+edges:
+  - {from: batteries_over_cycle_limit, to: failed_landing_rate, weight: 0.02, confidence: 0.3, why: worn batteries are a common cause of low-power landings}
+  - {from: battery_resistance_max_mohm, to: failed_landing_rate, weight: 0.002, confidence: 0.3, why: high internal resistance means the pack sags under load}
+  - {from: firmware_out_of_date, to: fleet_ready_rate, weight: -0.03, confidence: 0.2, why: aircraft on old firmware may be held back until updated}
+
+actions:
+  - id: retire_worn_batteries
+    title: Retire the worn batteries
+    description: Take batteries over their cycle or resistance limit out of service.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: batteries_over_cycle_limit, change: -0.8, uncertainty: 0.2}
+      - {kpi: battery_resistance_max_mohm, change: -0.3, uncertainty: 0.3}
+      - {kpi: failed_landing_rate, change: -0.2, uncertainty: 0.4}
+
+  - id: inspect_grounded_aircraft
+    title: Inspect the grounded aircraft
+    description: Schedule an inspection of the grounded and maintenance aircraft to return them to service.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: fleet_ready_rate, change: 0.1, uncertainty: 0.3}
+
+  - id: push_firmware_update
+    title: Push the firmware update to the fleet
+    description: Update the aircraft on old firmware. A field update can change flight behaviour, so two approvers are needed and it is blocked if the ready rate would fall.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: fleet_ready_rate, max_worsen: 0.1, why: an update must not ground much of the fleet}
+    effects:
+      - {kpi: firmware_out_of_date, change: -0.8, uncertainty: 0.3}
+      - {kpi: fleet_ready_rate, change: -0.05, uncertainty: 0.3}
+

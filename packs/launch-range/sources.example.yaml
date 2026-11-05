@@ -1,0 +1,11 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your range-scheduling and ground-systems tools (same columns). Dry-run never needs
+# any variable.
+variables: []
+files:
+  - {path: fixture/slots.csv, description: "Range slots: slot_id, state (booked|free|held)"}
+  - {path: fixture/pads.csv, description: "Pads: pad_id, turnaround_h (hours between launches)"}
+  - {path: fixture/equipment.csv, description: "Ground equipment: item_id, state (ready|degraded|down), critical (yes|no)"}
+  - {path: fixture/holds.csv, description: "Holds: hold_id, cause (weather|range|technical)"}

@@ -1,0 +1,7 @@
+wo_id,type,state,overdue_days
+w1,preventive,done,0
+w2,preventive,open,5
+w3,corrective,open,0
+w4,preventive,done,0
+w5,preventive,open,0
+w6,corrective,done,0

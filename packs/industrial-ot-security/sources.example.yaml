@@ -1,0 +1,9 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your OT asset inventory and remote-access log (same columns). Dry-run never needs
+# any variable.
+variables: []
+files:
+  - {path: fixture/assets.csv, description: "OT assets: asset_id, zone, criticality (high|normal), monitored (yes|no), patch_age_days, internet_exposed (yes|no)"}
+  - {path: fixture/remote.csv, description: "Remote-access sessions: session_id, vendor, approved (yes|no), duration_min"}

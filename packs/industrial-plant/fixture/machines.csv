@@ -1,0 +1,5 @@
+machine_id,state,planned_h,run_h,good_units,total_units,mtbf_h,mttr_h
+m1,running,100,90,880,900,200,4
+m2,running,100,80,700,800,150,6
+m3,down,100,40,300,400,60,12
+m4,idle,100,70,650,700,180,5

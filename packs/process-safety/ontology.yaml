@@ -1,0 +1,22 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Links say what depends on what; only kpis.yaml predicts.
+name: process-safety
+
+objects:
+  - name: SafetyDevice
+    kpis: [overdue_proof_tests, sis_proof_tests_overdue]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: class, type: string}
+      - {name: due_in_days, type: number}
+  - name: ChangeItem
+    kpis: [overdue_moc, oldest_overdue_moc_days]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+
+mappings:
+  - {source: fixture/prooftests.csv, type: SafetyDevice, namespace: psm, key: device_id, props: {name: device_id, class: class, due_in_days: due_in_days}}
+  - {source: fixture/moc.csv, type: ChangeItem, namespace: psm, key: moc_id, props: {name: moc_id, state: state}}

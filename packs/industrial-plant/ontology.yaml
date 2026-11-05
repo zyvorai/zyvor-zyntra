@@ -1,0 +1,22 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Links say what depends on what; only kpis.yaml predicts.
+name: industrial-plant
+
+objects:
+  - name: Machine
+    kpis: [machine_availability, machines_down, mtbf_avg_h, mttr_avg_h]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+  - name: WorkOrder
+    kpis: [pm_compliance, overdue_pm, open_work_orders]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: type, type: string}
+      - {name: state, type: string}
+
+mappings:
+  - {source: fixture/machines.csv, type: Machine, namespace: plant, key: machine_id, props: {name: machine_id, state: state}}
+  - {source: fixture/workorders.csv, type: WorkOrder, namespace: plant, key: wo_id, props: {name: wo_id, type: type, state: state}}

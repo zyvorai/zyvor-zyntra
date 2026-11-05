@@ -149,6 +149,11 @@ Sign in as `admin` / `Admin@321`. That account exists only while the policy file
 | Airline operations | [`packs/aviation-ops`](packs/aviation-ops) ([docs](docs/AVIATION.md)) | `./bin/zyntra plan -f packs/aviation-ops` |
 | Aircraft maintenance | [`packs/aviation-mro`](packs/aviation-mro) ([docs](docs/AVIATION.md)) | `./bin/zyntra plan -f packs/aviation-mro` |
 | Airport operations | [`packs/airport-ops`](packs/airport-ops) ([docs](docs/AVIATION.md)) | `./bin/zyntra plan -f packs/airport-ops` |
+| Plant operations | [`packs/industrial-plant`](packs/industrial-plant) ([docs](docs/INDUSTRIAL.md)) | `./bin/zyntra plan -f packs/industrial-plant` |
+| Process safety | [`packs/process-safety`](packs/process-safety) ([docs](docs/INDUSTRIAL.md)) | `./bin/zyntra plan -f packs/process-safety` |
+| OT security | [`packs/industrial-ot-security`](packs/industrial-ot-security) ([docs](docs/INDUSTRIAL.md)) | `./bin/zyntra plan -f packs/industrial-ot-security` |
+| Drone and eVTOL fleet | [`packs/uas-fleet`](packs/uas-fleet) ([docs](docs/INDUSTRIAL.md)) | `./bin/zyntra plan -f packs/uas-fleet` |
+| Launch range | [`packs/launch-range`](packs/launch-range) ([docs](docs/INDUSTRIAL.md)) | `./bin/zyntra plan -f packs/launch-range` |
 
 A pack is a directory of files; a new industry is a new directory, not a project. `zyntra pack draft` drafts one from a sample export.
 

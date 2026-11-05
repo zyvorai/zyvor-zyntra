@@ -1,0 +1,6 @@
+asset_id,zone,criticality,monitored,patch_age_days,internet_exposed
+a1,l1,high,yes,400,no
+a2,l1,high,no,90,no
+a3,l2,normal,yes,30,no
+a4,l2,high,yes,200,yes
+a5,l3,normal,no,10,no

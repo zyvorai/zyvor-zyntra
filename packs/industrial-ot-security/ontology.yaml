@@ -1,0 +1,22 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Links say what depends on what; only kpis.yaml predicts.
+name: industrial-ot-security
+
+objects:
+  - name: OtAsset
+    kpis: [monitoring_coverage, critical_assets_unpatched, patch_age_p90_days, internet_exposed_assets]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: zone, type: string}
+      - {name: criticality, type: string}
+  - name: RemoteSession
+    kpis: [unapproved_remote_sessions]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: approved, type: string}
+
+mappings:
+  - {source: fixture/assets.csv, type: OtAsset, namespace: ot, key: asset_id, props: {name: asset_id, zone: zone, criticality: criticality}}
+  - {source: fixture/remote.csv, type: RemoteSession, namespace: ot, key: session_id, props: {name: session_id, approved: approved}}

@@ -1,0 +1,21 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Links say what depends on what; only kpis.yaml predicts.
+name: uas-fleet
+
+objects:
+  - name: Aircraft
+    kpis: [fleet_ready_rate, firmware_out_of_date]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: state, type: string}
+  - name: Battery
+    kpis: [batteries_over_cycle_limit, battery_resistance_max_mohm]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: cycles, type: number}
+
+mappings:
+  - {source: fixture/drones.csv, type: Aircraft, namespace: uas, key: drone_id, props: {name: drone_id, state: state}}
+  - {source: fixture/batteries.csv, type: Battery, namespace: uas, key: battery_id, props: {name: battery_id, cycles: cycles}}
