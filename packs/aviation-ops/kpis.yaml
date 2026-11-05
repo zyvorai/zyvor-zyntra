@@ -1,0 +1,102 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Departure punctuality, turnaround and crew duty headroom. The fixture/ files
+# are a small invented sample; point the file sources at exports from your
+# operations control system (same columns). Targets and weights are starting
+# points, not a standard.
+name: aviation-ops
+
+kpis:
+  - id: on_time_rate
+    name: On-time rate
+    unitClass: ratio
+    owner: operations
+    value: 0
+    target: 0.85
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/flights.csv, field: "#(on_time=yes)", denominator: "#"}
+
+  - id: cancellation_rate
+    name: Cancellation rate
+    unitClass: ratio
+    owner: operations
+    value: 0
+    target: 0.02
+    direction: lower
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/flights.csv, field: "#(status=cancelled)", denominator: "#"}
+
+  - id: long_delays
+    name: Departures delayed over 60 minutes
+    unit: flights
+    unitClass: count
+    owner: operations
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/flights.csv, field: "#", where: {dep_delay_min: ">60"}}
+
+  - id: turnaround_p90_min
+    name: Turnaround, 90th percentile
+    unit: min
+    unitClass: duration
+    owner: operations
+    value: 0
+    target: 60
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/flights.csv, field: "*.turnaround_min", agg: p90, where: {status: "=departed"}}
+
+  - id: crews_near_duty_limit
+    name: Crews within 4 hours of their duty limit
+    unit: crews
+    unitClass: count
+    owner: crewing
+    value: 0
+    target: 1
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/crews.csv, field: "#", where: {headroom_h: "<4"}}
+
+edges:
+  - {from: long_delays, to: on_time_rate, weight: -0.04, confidence: 0.5, why: each long delay is a missed departure and often knocks on to the next rotation}
+  - {from: turnaround_p90_min, to: on_time_rate, weight: -0.002, confidence: 0.4, why: slow turnarounds push departures past the on-time window}
+  - {from: crews_near_duty_limit, to: cancellation_rate, weight: 0.03, confidence: 0.4, why: a crew that reaches its duty limit mid-rotation can force a cancellation}
+
+actions:
+  - id: add_standby_crew
+    title: Call in a standby crew
+    description: Roster a standby crew for the rotations with crews near their duty limit.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: crews_near_duty_limit, change: -0.5, uncertainty: 0.3}
+      - {kpi: cancellation_rate, change: -0.3, uncertainty: 0.4}
+
+  - id: add_ground_handling_team
+    title: Add a ground-handling team at the slow stand
+    description: Put an extra team on the stands with the slowest turnarounds.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: turnaround_p90_min, change: -0.15, uncertainty: 0.3}
+
+  - id: swap_tail
+    title: Swap the tail on a delayed rotation
+    description: Move a rotation to a serviceable spare aircraft. A tail swap changes crew, weight and passengers' seats, so two approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: crews_near_duty_limit, max_worsen: 0.5, why: a swap must not push another crew over its duty limit}
+    effects:
+      - {kpi: long_delays, change: -0.5, uncertainty: 0.4}
+      - {kpi: on_time_rate, change: 0.05, uncertainty: 0.3}

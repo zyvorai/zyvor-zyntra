@@ -1,0 +1,9 @@
+wo_id,tail,kind,state,age_days,due_in_days
+w1,T1,scheduled,open,4,10
+w2,T3,unscheduled,open,12,2
+w3,T3,deferred,open,30,-5
+w4,T4,deferred,open,9,-1
+w5,T2,scheduled,closed,2,0
+w6,T5,unscheduled,open,20,3
+w7,T6,deferred,open,15,6
+w8,T1,unscheduled,closed,5,0

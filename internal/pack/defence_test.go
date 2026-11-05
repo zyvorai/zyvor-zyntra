@@ -13,6 +13,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/planner"
 )
 
+// TestDefencePacks also covers the aviation packs, which share its shape.
 func TestDefencePacks(t *testing.T) {
 	cases := []struct {
 		pack string

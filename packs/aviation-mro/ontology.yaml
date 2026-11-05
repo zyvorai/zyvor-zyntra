@@ -1,0 +1,46 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which aircraft carry which work orders. Links say what depends on what; only
+# kpis.yaml predicts.
+name: aviation-mro
+
+objects:
+  - name: Aircraft
+    kpis: [aircraft_availability, aircraft_on_ground]
+    properties:
+      - {name: tail, type: string, required: true}
+      - {name: status, type: string}
+  - name: WorkOrder
+    kpis: [open_work_orders, deferred_defects_overdue]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: kind, type: string}
+      - {name: state, type: string}
+      - {name: due_in_days, type: number}
+  - name: Part
+    kpis: [aog_critical_stockouts]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: on_hand, type: number}
+
+links:
+  - {name: raised_on, from: WorkOrder, to: Aircraft}
+
+mappings:
+  - source: fixture/aircraft.csv
+    type: Aircraft
+    namespace: mro
+    key: tail
+    props: {tail: tail, status: status}
+  - source: fixture/workorders.csv
+    type: WorkOrder
+    namespace: mro
+    key: wo_id
+    props: {name: wo_id, kind: kind, state: state, due_in_days: due_in_days}
+    links: [{type: raised_on, column: tail, to: Aircraft}]
+  - source: fixture/parts.csv
+    type: Part
+    namespace: mro
+    key: part_id
+    props: {name: part_id, on_hand: on_hand}

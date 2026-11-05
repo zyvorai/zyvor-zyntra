@@ -1,0 +1,9 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your operations control and
+# crew-management systems (same columns). Dry-run never needs any variable.
+variables: []
+files:
+  - {path: fixture/flights.csv, description: "Flights: flight_id, tail, status (departed|cancelled), dep_delay_min, arr_delay_min, turnaround_min, on_time (yes|no)"}
+  - {path: fixture/crews.csv, description: "Crews: crew_id, base, headroom_h (hours left before the duty limit)"}

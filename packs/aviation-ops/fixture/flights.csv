@@ -1,0 +1,11 @@
+flight_id,tail,status,dep_delay_min,arr_delay_min,turnaround_min,on_time
+f1,T1,departed,0,0,40,yes
+f2,T2,departed,12,8,45,yes
+f3,T3,departed,25,20,55,no
+f4,T1,departed,5,3,35,yes
+f5,T4,departed,70,65,80,no
+f6,T2,departed,0,-5,42,yes
+f7,T5,cancelled,0,0,0,no
+f8,T3,departed,130,125,95,no
+f9,T6,departed,10,12,50,yes
+f10,T4,departed,3,0,38,yes

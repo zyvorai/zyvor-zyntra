@@ -1,0 +1,140 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Fleet availability, maintenance backlog and parts supply for a maintenance
+# organisation. The fixture/ files are a small invented sample; point the file
+# sources at exports from your maintenance information system (same columns).
+# Targets and weights are starting points, not a standard.
+name: aviation-mro
+
+kpis:
+  - id: aircraft_availability
+    name: Aircraft availability
+    unitClass: ratio
+    owner: maintenance
+    value: 0
+    target: 0.9
+    direction: higher
+    criticality: critical
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/aircraft.csv, field: "#(status=serviceable)", denominator: "#"}
+
+  - id: aircraft_on_ground
+    name: Aircraft on ground
+    unit: aircraft
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/aircraft.csv, field: "#(status=aog)"}
+
+  - id: open_work_orders
+    name: Open work orders
+    unit: orders
+    unitClass: count
+    owner: planning
+    value: 0
+    target: 4
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "#(state=open)"}
+
+  - id: work_order_age_p90_days
+    name: Open work order age, 90th percentile
+    unit: d
+    unitClass: duration
+    owner: planning
+    value: 0
+    target: 14
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "*.age_days", agg: p90, where: {state: "=open"}}
+
+  - id: deferred_defects_overdue
+    name: Deferred defects past their due date
+    unit: defects
+    unitClass: count
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source: {kind: file, file: fixture/workorders.csv, field: "#", where: {kind: "=deferred", state: "=open", due_in_days: "<0"}}
+
+  - id: unscheduled_share
+    name: Share of work that is unscheduled
+    unitClass: ratio
+    owner: planning
+    value: 0
+    target: 0.25
+    direction: lower
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/workorders.csv, field: "#(kind=unscheduled)", denominator: "#"}
+
+  - id: parts_fill_rate
+    name: Parts fill rate
+    unitClass: ratio
+    owner: supply
+    value: 0
+    target: 0.9
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/parts.csv, field: "*.filled", denominator: "*.requested"}
+
+  - id: aog_critical_stockouts
+    name: AOG-critical parts with none on hand
+    unit: parts
+    unitClass: count
+    owner: supply
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/parts.csv, field: "#", where: {aog_critical: "=yes", on_hand: "<=0"}}
+
+edges:
+  - {from: aog_critical_stockouts, to: aircraft_on_ground, weight: 0.5, confidence: 0.5, why: an aircraft waiting for a part it cannot get stays on the ground}
+  - {from: aircraft_on_ground, to: aircraft_availability, weight: -0.15, confidence: 0.7, why: each aircraft on the ground is out of the available fleet}
+  - {from: parts_fill_rate, to: aog_critical_stockouts, weight: -1.5, confidence: 0.4, why: unfilled requests become stockouts}
+  - {from: open_work_orders, to: aircraft_availability, weight: -0.01, confidence: 0.4, why: aircraft in maintenance are not available}
+  - {from: unscheduled_share, to: work_order_age_p90_days, weight: 20, confidence: 0.3, why: unplanned work crowds out the planned queue}
+
+actions:
+  - id: expedite_aog_part
+    title: Expedite parts for aircraft on ground
+    description: Raise priority and ship by the fastest route for AOG-critical requisitions.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: aog_critical_stockouts, change: -0.8, uncertainty: 0.3}
+      - {kpi: parts_fill_rate, change: 0.05, uncertainty: 0.3}
+
+  - id: add_line_maintenance_shift
+    title: Add a line-maintenance shift
+    description: Staff an extra shift to clear the oldest open work orders.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: work_order_age_p90_days, change: -0.3, uncertainty: 0.3}
+      - {kpi: open_work_orders, change: -0.3, uncertainty: 0.3}
+
+  - id: defer_defect_to_next_check
+    title: Defer a defect to the next scheduled check
+    description: Return an aircraft to service with the defect deferred. This is an airworthiness decision under your approved procedures, so two approvers are needed and the pack only records the proposal.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: deferred_defects_overdue, max_worsen: 0.5, why: a deferral must not add to the defects already past due}
+    effects:
+      - {kpi: aircraft_availability, change: 0.05, uncertainty: 0.4}
+      - {kpi: deferred_defects_overdue, change: 0.3, uncertainty: 0.4}

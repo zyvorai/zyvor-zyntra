@@ -1,0 +1,39 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which aircraft fly which flights, and which crews are based where. Links say
+# what depends on what; only kpis.yaml predicts.
+name: aviation-ops
+
+objects:
+  - name: Aircraft
+    kpis: [turnaround_p90_min]
+    properties:
+      - {name: tail, type: string, required: true}
+  - name: Flight
+    kpis: [on_time_rate, cancellation_rate, long_delays]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: status, type: string}
+      - {name: dep_delay_min, type: number}
+  - name: Crew
+    kpis: [crews_near_duty_limit]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: base, type: string}
+      - {name: headroom_h, type: number}
+
+links:
+  - {name: operated_by, from: Flight, to: Aircraft}
+
+mappings:
+  - source: fixture/flights.csv
+    type: Flight
+    namespace: ops
+    key: flight_id
+    props: {name: flight_id, status: status, dep_delay_min: dep_delay_min}
+  - source: fixture/crews.csv
+    type: Crew
+    namespace: ops
+    key: crew_id
+    props: {name: crew_id, base: base, headroom_h: headroom_h}
