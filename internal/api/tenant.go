@@ -98,11 +98,15 @@ func (s *Server) proposalFor(r *http.Request, id string) (approvals.Proposal, er
 	if t := auth.FromContext(r.Context()).Tenant; t != "" && p.Tenant != t {
 		return approvals.Proposal{}, approvals.ErrNotFound
 	}
+	if !s.proposalVisible(r, p) {
+		return approvals.Proposal{}, approvals.ErrNotFound
+	}
 	return p, nil
 }
 
 // ownProposals keeps the proposals the caller may see, trimmed for tenants.
 func (s *Server) ownProposals(r *http.Request, in []approvals.Proposal) []approvals.Proposal {
+	in = s.markFilter(r, in)
 	t := auth.FromContext(r.Context()).Tenant
 	if t == "" {
 		return in
@@ -151,6 +155,7 @@ func (s *Server) view(r *http.Request, p approvals.Proposal) approvals.Proposal 
 // of their own proposals only, without the automatic notes, which can carry
 // KPI detail, and without the hash chain.
 func (s *Server) auditView(r *http.Request, in []approvals.Event) []approvals.Event {
+	in = s.markFilterEvents(r, in)
 	t := auth.FromContext(r.Context()).Tenant
 	if t == "" {
 		if in == nil {
@@ -221,7 +226,7 @@ func (s *Server) kpiLabeler(r *http.Request) func(string) string {
 	if tenant == "" {
 		return func(id string) string { return id }
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	return func(id string) string {
 		if k, ok := m.KPI(id); ok && k.Tenant == tenant {
 			return id
@@ -274,7 +279,7 @@ func (s *Server) handleTenantKPIs(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "name a tenant with ?tenant=")
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	unusable := freshness.Set(s.freshness(m))
 	out := []tenantKPI{}
 	for _, k := range m.KPIs {
@@ -294,7 +299,7 @@ func (s *Server) handleTenantGaps(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "name a tenant with ?tenant=")
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	g := gaps.ForTenant(gaps.Detect(m), tenant)
 	for i := range g {
 		g[i].Owner = "" // provider-side ownership is not the tenant's business

@@ -16,7 +16,7 @@ import (
 )
 
 func (s *Server) executiveInput(r *http.Request) (executive.Input, error) {
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	plan, st, err := s.plan(m)
 	if err != nil {
 		return executive.Input{}, err
@@ -24,7 +24,7 @@ func (s *Server) executiveInput(r *http.Request) (executive.Input, error) {
 	now := time.Now()
 	in := executive.Input{
 		Model: m, Plan: plan, Gaps: gaps.Detect(m), Fresh: st,
-		Overlay: s.overlay(m), Proposals: s.opt.Store.List(),
+		Overlay: s.overlay(m), Proposals: s.markFilter(r, s.opt.Store.List()),
 		Now: now, Audience: r.URL.Query().Get("audience"),
 	}
 	return in, nil

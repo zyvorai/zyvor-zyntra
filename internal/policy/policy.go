@@ -20,6 +20,7 @@ import (
 
 	"github.com/zyvorai/zyntra/internal/calendar"
 	"github.com/zyvorai/zyntra/internal/graph"
+	"github.com/zyvorai/zyntra/internal/marking"
 )
 
 // Keep modes.
@@ -95,6 +96,9 @@ type User struct {
 	// Tenant confines the account to one tenant's workspace. Only viewer,
 	// proposer and approver roles may be tenant-bound.
 	Tenant string `yaml:"tenant,omitempty" json:"tenant,omitempty"`
+	// Clearance is the most restricted marking the account may see. It must
+	// be one of the policy's markings levels; empty is the lowest.
+	Clearance string `yaml:"clearance,omitempty" json:"clearance,omitempty"`
 }
 
 // Connector is one connector credential: a token (kept as its SHA-256), the
@@ -139,6 +143,10 @@ type Policy struct {
 	Connectors []Connector `yaml:"connectors,omitempty" json:"connectors,omitempty"`
 	// ServiceTokens are read and propose credentials for machine callers.
 	ServiceTokens []ServiceToken `yaml:"service_tokens,omitempty" json:"service_tokens,omitempty"`
+	// Markings turns on data markings: ordered levels that KPIs, actions and
+	// ontology types and properties may carry, and that accounts hold as a
+	// clearance. Without it nothing is marked and everything is visible.
+	Markings *marking.Scheme `yaml:"markings,omitempty" json:"markings,omitempty"`
 }
 
 // Effective is the merged policy for one proposal.
@@ -207,6 +215,9 @@ func (p *Policy) validate() error {
 	if d := p.Revalidation.MaxDrift; d != nil && (*d < 0 || *d > 1) {
 		return fmt.Errorf("revalidation.maxDrift must be between 0 and 1")
 	}
+	if err := p.Markings.Validate(); err != nil {
+		return err
+	}
 	seen := map[string]bool{}
 	for _, u := range p.Users {
 		if u.Name == "" || u.PasswordHash == "" {
@@ -216,6 +227,14 @@ func (p *Policy) validate() error {
 			return fmt.Errorf("duplicate user %q", u.Name)
 		}
 		seen[u.Name] = true
+		if u.Clearance != "" {
+			if p.Markings == nil {
+				return fmt.Errorf("user %s: clearance needs a markings block", u.Name)
+			}
+			if !p.Markings.Known(u.Clearance) {
+				return fmt.Errorf("user %s: clearance %q is not a markings level", u.Name, u.Clearance)
+			}
+		}
 		if u.Tenant != "" {
 			id := auth.Identity{}
 			for _, r := range u.Roles {
@@ -312,9 +331,40 @@ func (p *Policy) UseModel(m *graph.Model) {
 	}
 }
 
-// CheckModel reports actions that name unknown windows. Call UseModel first
-// so model calendars count.
+// Scheme returns the markings scheme, or nil when markings are off.
+func (p *Policy) Scheme() *marking.Scheme {
+	if p == nil {
+		return nil
+	}
+	return p.Markings
+}
+
+// CheckModel reports actions that name unknown windows and KPIs or actions
+// carrying a marking the policy does not define. Call UseModel first so model
+// calendars count.
 func (p *Policy) CheckModel(m *graph.Model) error {
+	for _, k := range m.KPIs {
+		if k.Marking == "" {
+			continue
+		}
+		if p.Markings == nil {
+			return fmt.Errorf("kpi %s: marking %q needs a markings block in the policy", k.ID, k.Marking)
+		}
+		if !p.Markings.Known(k.Marking) {
+			return fmt.Errorf("kpi %s: unknown marking %q", k.ID, k.Marking)
+		}
+	}
+	for _, a := range m.Actions {
+		if a.Marking == "" {
+			continue
+		}
+		if p.Markings == nil {
+			return fmt.Errorf("action %s: marking %q needs a markings block in the policy", a.ID, a.Marking)
+		}
+		if !p.Markings.Known(a.Marking) {
+			return fmt.Errorf("action %s: unknown marking %q", a.ID, a.Marking)
+		}
+	}
 	for _, a := range m.Actions {
 		var names []string
 		if a.Window != "" {

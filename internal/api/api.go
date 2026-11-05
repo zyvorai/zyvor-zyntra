@@ -196,8 +196,8 @@ func (s *Server) sourceStatus() []adapters.Status {
 	return append([]adapters.Status(nil), s.sources...)
 }
 
-func (s *Server) aiSnapshot(owner ...string) ai.Snapshot {
-	m, _ := s.snapshot()
+func (s *Server) aiSnapshot(r *http.Request, owner ...string) ai.Snapshot {
+	m, _ := s.snapshotFor(r)
 	plan, _, _ := s.plan(m)
 	g := gaps.Detect(m)
 	if len(owner) > 0 && owner[0] != "" {
@@ -209,7 +209,7 @@ func (s *Server) aiSnapshot(owner ...string) ai.Snapshot {
 		Analytics: &analytics,
 		Model:     m, Gaps: g, Severity: gaps.Total(m, nil), Plan: plan.Recommendations,
 		Anomalies: ai.Anomalies(m, s.opt.History), Forecasts: ai.Forecasts(m, s.opt.History),
-		Sources: s.sourceStatus(),
+		Sources: s.sourcesFor(m),
 	}
 }
 
@@ -505,15 +505,16 @@ func spa(static fs.FS) http.Handler {
 	})
 }
 
-func (s *Server) handleMeta(w http.ResponseWriter, _ *http.Request) {
-	src := s.sourceStatus()
+func (s *Server) handleMeta(w http.ResponseWriter, r *http.Request) {
+	vm, _ := s.snapshotFor(r)
+	src := s.sourcesFor(vm)
 	healthy := 0
 	for _, x := range src {
 		if x.OK {
 			healthy++
 		}
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"product": "Zyntra", "version": s.opt.Version, "host": s.opt.Host, "model": m.Name, "pack": m.Pack,
 		"auth_required": s.opt.Auth.Required(), "auth_methods": s.opt.Auth.Methods(),
@@ -523,16 +524,16 @@ func (s *Server) handleMeta(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (s *Server) handleGraph(w http.ResponseWriter, _ *http.Request) {
-	m, at := s.snapshot()
+func (s *Server) handleGraph(w http.ResponseWriter, r *http.Request) {
+	m, at := s.snapshotFor(r)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"model": m, "refreshed_at": at, "version": m.Version(),
 		"constraints": m.AllConstraints(), "freshness": s.freshness(m), "owners": m.Owners(),
 	})
 }
 
-func (s *Server) handleFreshness(w http.ResponseWriter, _ *http.Request) {
-	m, at := s.snapshot()
+func (s *Server) handleFreshness(w http.ResponseWriter, r *http.Request) {
+	m, at := s.snapshotFor(r)
 	st := s.freshness(m)
 	unusable := freshness.Unusable(st)
 	if unusable == nil {
@@ -542,7 +543,7 @@ func (s *Server) handleFreshness(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleGaps(w http.ResponseWriter, r *http.Request) {
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	g := gaps.ForOwner(gaps.Detect(m), r.URL.Query().Get("owner"))
 	if g == nil {
 		g = []gaps.Gap{}
@@ -558,7 +559,7 @@ func (s *Server) plan(m *graph.Model) (planner.Result, []freshness.State, error)
 }
 
 func (s *Server) handlePlan(w http.ResponseWriter, req *http.Request) {
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(req)
 	r, st, err := s.plan(m)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -608,7 +609,7 @@ func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	opt := sim.Options{Unusable: freshness.Set(s.freshness(m))}
 	var (
 		res sim.Result
@@ -632,18 +633,18 @@ func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, res)
 }
 
-func (s *Server) handleSources(w http.ResponseWriter, _ *http.Request) {
-	src := s.sourceStatus()
+func (s *Server) handleSources(w http.ResponseWriter, r *http.Request) {
+	vm, at := s.snapshotFor(r)
+	src := s.sourcesFor(vm)
 	if src == nil {
 		src = []adapters.Status{}
 	}
-	_, at := s.snapshot()
 	writeJSON(w, http.StatusOK, map[string]any{"sources": src, "refreshed_at": at})
 }
 
 func (s *Server) handleKPIHistory(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	if _, ok := m.KPI(id); !ok {
 		writeErr(w, http.StatusNotFound, "unknown kpi")
 		return
@@ -677,14 +678,14 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	t := time.NewTicker(s.opt.Interval)
 	defer t.Stop()
 	for {
-		snap := s.aiSnapshot()
-		_, at := s.snapshot()
+		snap := s.aiSnapshot(r)
+		_, at := s.snapshotFor(r)
 		top := snap.Plan
 		if len(top) > 3 {
 			top = top[:3]
 		}
 		pending := 0
-		for _, p := range s.opt.Store.List() {
+		for _, p := range s.markFilter(r, s.opt.Store.List()) {
 			if p.Status == approvals.Pending {
 				pending++
 			}
@@ -711,7 +712,7 @@ func (s *Server) handleAIStatus(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) handleAIDigest(w http.ResponseWriter, r *http.Request) {
 	owner, window := r.URL.Query().Get("owner"), r.URL.Query().Get("window")
-	snap := s.aiSnapshot(owner)
+	snap := s.aiSnapshot(r, owner)
 	if window == "" {
 		writeJSON(w, http.StatusOK, s.opt.AI.Digest(r.Context(), snap))
 		return
@@ -726,8 +727,8 @@ func (s *Server) handleAIDigest(w http.ResponseWriter, r *http.Request) {
 		"model": a.Model, "llm_error": a.LLMError, "facts": f})
 }
 
-func (s *Server) handleAIInsights(w http.ResponseWriter, _ *http.Request) {
-	snap := s.aiSnapshot()
+func (s *Server) handleAIInsights(w http.ResponseWriter, r *http.Request) {
+	snap := s.aiSnapshot(r)
 	an, fc := snap.Anomalies, snap.Forecasts
 	if an == nil {
 		an = []ai.Anomaly{}
@@ -784,7 +785,7 @@ func (s *Server) handleAIAsk(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, s.opt.AI.Documents(r.Context(), q, hits))
 		return
 	}
-	snap := s.aiSnapshot()
+	snap := s.aiSnapshot(r)
 	snap.Objects = s.objectContext(r, snap.Model)
 	if auth.FromContext(r.Context()).Tenant != "" {
 		// A tenant-bound caller gets object answers only, and the model is
@@ -801,7 +802,7 @@ func (s *Server) handleAIExplain(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	snap := s.aiSnapshot()
+	snap := s.aiSnapshot(r)
 	res, err := sim.Simulate(snap.Model, req.Action)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())

@@ -63,6 +63,10 @@ func buildOntology(path string, m *graph.Model, pol *policy.Policy, stateDir str
 	ac := &ontology.Access{Schema: def.Schema()}
 	if pol != nil {
 		ac.Rules = pol.Access
+		ac.Scheme = pol.Scheme()
+	}
+	if err := def.Schema().CheckMarkings(ac.Scheme); err != nil {
+		return api.OntologyOptions{}, fmt.Errorf("ontology markings: %w", err)
 	}
 	scn, err := scenario.Open(filepath.Join(stateDir, "scenarios.json"))
 	if err != nil {

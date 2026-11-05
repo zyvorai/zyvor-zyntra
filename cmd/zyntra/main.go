@@ -727,7 +727,7 @@ func buildAuth(ctx context.Context, pol *policy.Policy) (*auth.Auth, error) {
 	}
 	var users []auth.LocalUser
 	for _, u := range pol.Users {
-		lu := auth.LocalUser{Name: u.Name, Hash: u.PasswordHash, Tenant: u.Tenant}
+		lu := auth.LocalUser{Name: u.Name, Hash: u.PasswordHash, Tenant: u.Tenant, Clearance: u.Clearance}
 		for _, r := range u.Roles {
 			role, err := auth.ParseRole(r)
 			if err != nil {
@@ -755,7 +755,12 @@ func buildAuth(ctx context.Context, pol *policy.Policy) (*auth.Auth, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ZYNTRA_OIDC_ROLE_MAP: %w", err)
 	}
+	clearMap, err := auth.ParseClearanceMap(env("ZYNTRA_OIDC_CLEARANCE_MAP", ""))
+	if err != nil {
+		return nil, fmt.Errorf("ZYNTRA_OIDC_CLEARANCE_MAP: %w", err)
+	}
 	cfg := auth.OIDCConfig{
+		ClearanceMap: clearMap, Scheme: pol.Scheme(),
 		Issuer: issuer, ClientID: env("ZYNTRA_OIDC_CLIENT_ID", ""), ClientSecret: env("ZYNTRA_OIDC_CLIENT_SECRET", ""),
 		RedirectURL: env("ZYNTRA_OIDC_REDIRECT_URL", ""), GroupsClaim: env("ZYNTRA_OIDC_GROUPS_CLAIM", "groups"), RoleMap: roleMap,
 		TenantClaim: env("ZYNTRA_OIDC_TENANT_CLAIM", ""),

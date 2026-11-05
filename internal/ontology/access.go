@@ -7,6 +7,8 @@ import (
 	"errors"
 	"slices"
 	"sort"
+
+	"github.com/zyvorai/zyntra/internal/marking"
 )
 
 // Principal is who is asking. Retrieval and execution both take one.
@@ -17,6 +19,9 @@ type Principal struct {
 	// tenant are hidden from it unless a rule lists their type in
 	// SharedTypes.
 	Tenant string
+	// Clearance is the most restricted data marking the principal may see.
+	// Empty is the lowest. It only matters when the Access has a Scheme.
+	Clearance string
 }
 
 func (p Principal) has(role string) bool { return slices.Contains(p.Roles, role) }
@@ -50,6 +55,10 @@ type Rule struct {
 type Access struct {
 	Rules  []Rule
 	Schema *Schema
+	// Scheme turns on data markings: a type or property whose marking the
+	// principal's clearance does not cover is hidden, administrators
+	// included. Nil means markings are off.
+	Scheme *marking.Scheme
 }
 
 func (a *Access) matching(p Principal) []Rule {
@@ -111,10 +120,15 @@ func (a *Access) Filter(p Principal, o Object) (Object, bool) {
 		return Object{}, false
 	}
 	sensitive := map[string]bool{}
+	marked := map[string]string{}
 	if a.Schema != nil {
 		if ot, ok := a.Schema.Object(o.Type); ok {
+			if !a.Scheme.Dominates(p.Clearance, ot.Marking) {
+				return Object{}, false
+			}
 			for _, pr := range ot.Properties {
 				sensitive[pr.Name] = pr.Sensitive
+				marked[pr.Name] = pr.Marking
 			}
 		}
 	}
@@ -122,6 +136,9 @@ func (a *Access) Filter(p Principal, o Object) (Object, bool) {
 	out.Props = make(map[string]Value, len(o.Props))
 	for k, v := range o.Props {
 		if deny[k] || (sensitive[k] && !allow[k] && !p.has("admin")) {
+			continue
+		}
+		if !a.Scheme.Dominates(p.Clearance, marked[k]) {
 			continue
 		}
 		out.Props[k] = v

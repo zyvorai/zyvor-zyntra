@@ -57,7 +57,7 @@ func hasRole(id auth.Identity, role string) bool {
 
 func principal(r *http.Request) ontology.Principal {
 	id := auth.FromContext(r.Context())
-	p := ontology.Principal{Subject: id.Subject, Tenant: id.Tenant}
+	p := ontology.Principal{Subject: id.Subject, Tenant: id.Tenant, Clearance: id.Clearance}
 	for _, role := range id.Roles {
 		p.Roles = append(p.Roles, string(role))
 	}
@@ -103,7 +103,7 @@ func (s *Server) handleOntSchema(w http.ResponseWriter, r *http.Request) {
 		d.Rollout = nil
 		// Object types name the provider KPIs that measure them; a tenant
 		// keeps only its own tenant's.
-		m, _ := s.snapshot()
+		m, _ := s.snapshotFor(r)
 		// Offer only the object types this account can actually see, so the
 		// provider's type names are not listed to a tenant that has none.
 		visible := map[string]bool{}
@@ -224,7 +224,7 @@ func (s *Server) handleOntObject(w http.ResponseWriter, r *http.Request) {
 			links = append(links, linkView{l, x, out})
 		}
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	var bad []string
 	bound := ontology.BoundKPIs(s.opt.Ontology.Store.Schema(), o)
 	for _, k := range bound {
@@ -259,7 +259,7 @@ func (s *Server) handleOntRisk(w http.ResponseWriter, r *http.Request) {
 	if !s.ontOn(w) {
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	rd := s.reader(r)
 	risks := ontology.AtRisk(rd, failing(m))
 	exposed := ontology.Exposed(rd, risks)
@@ -370,7 +370,7 @@ func (s *Server) handleOntView(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "no such view")
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	rd := s.reader(r)
 	risks := ontology.AtRisk(rd, failing(m))
 	byRisk := map[string]ontology.Risk{}
@@ -444,7 +444,7 @@ func (s *Server) handleAIPropose(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	id := auth.FromContext(r.Context())
 	reg := s.opt.Ontology.Actions
 	d := ai.Structure(req.Text, m, reg.List(), s.reader(r), func(a string, in map[string]string) []string {
@@ -483,7 +483,7 @@ func (s *Server) handleScenarioCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) runScenario(r *http.Request, sc scenario.Scenario) (scenario.Scenario, error) {
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	var rd *ontology.Reader
 	data := ""
 	if s.opt.Ontology.Store != nil {

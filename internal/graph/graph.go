@@ -369,6 +369,10 @@ type KPI struct {
 	Max         *float64    `yaml:"max,omitempty" json:"max,omitempty"`
 	Freshness   *Freshness  `yaml:"freshness,omitempty" json:"freshness,omitempty"`
 	Source      *Source     `yaml:"source,omitempty" json:"source,omitempty"`
+	// Marking is the data marking of this KPI (see the policy's markings).
+	// Empty means the default marking. Viewers without a matching clearance
+	// do not see the KPI at all.
+	Marking string `yaml:"marking,omitempty" json:"marking,omitempty"`
 	// UnitClass is percent, count, currency, duration or ratio; currency
 	// KPIs carry an ISO code. Gap math is relative to target, so classes
 	// only affect display and validation.
@@ -501,7 +505,9 @@ type Action struct {
 	// the proposal and never run automatically.
 	Compensate string   `yaml:"compensate,omitempty" json:"compensate,omitempty"`
 	Webhook    *Webhook `yaml:"webhook,omitempty" json:"webhook,omitempty"`
-	File       *FileOut `yaml:"file,omitempty" json:"file,omitempty"`
+	// Marking is the data marking of this action; empty is the default.
+	Marking string   `yaml:"marking,omitempty" json:"marking,omitempty"`
+	File    *FileOut `yaml:"file,omitempty" json:"file,omitempty"`
 }
 
 // Action kinds an executor can run.

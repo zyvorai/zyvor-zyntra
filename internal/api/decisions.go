@@ -141,7 +141,7 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	acts, err := resolveActions(m, append([]string{req.Action}, req.Actions...)...)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "unknown action: "+err.Error())
@@ -453,7 +453,7 @@ func (s *Server) confirmKeep(id, session string) {
 
 func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	p, err := s.opt.Store.Get(id)
+	p, err := s.proposalFor(r, id)
 	if err != nil {
 		writeErr(w, http.StatusNotFound, err.Error())
 		return
@@ -806,8 +806,8 @@ func (s *Server) handleDecisionExport(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, e)
 }
 
-func (s *Server) handlePolicy(w http.ResponseWriter, _ *http.Request) {
-	m, _ := s.snapshot()
+func (s *Server) handlePolicy(w http.ResponseWriter, r *http.Request) {
+	m, _ := s.snapshotFor(r)
 	per := map[string]policy.Effective{}
 	for _, a := range m.Actions {
 		per[a.ID] = s.opt.Policy.For(a)

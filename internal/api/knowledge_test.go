@@ -105,7 +105,7 @@ func TestKnowledgeAutoRoutingDoesNotAlterOperationalAsk(t *testing.T) {
 		t.Fatalf("%d", code)
 	}
 	// Running the model/AI engine directly still has no knowledge or tool access.
-	answer := f.s.opt.AI.Ask(context.Background(), "what should we do?", f.s.aiSnapshot())
+	answer := f.s.opt.AI.Ask(context.Background(), "what should we do?", f.s.aiSnapshot(httptest.NewRequest("GET", "/", nil)))
 	if answer.Intent != "plan" {
 		t.Fatalf("%+v", answer)
 	}

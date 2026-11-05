@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/zyvorai/zyntra/internal/marking"
 )
 
 const (
@@ -91,6 +93,10 @@ type Identity struct {
 	// its objects, proposals, decisions and audit entries, and nothing
 	// deployment-wide. It travels in the signed session cookie.
 	Tenant string `json:"tenant,omitempty"`
+	// Clearance is the most restricted data marking this identity may see.
+	// Empty means the least restricted. It is only meaningful when the policy
+	// defines markings, and it travels in the signed session cookie.
+	Clearance string `json:"clearance,omitempty"`
 	// Scope is set for connector credentials and limits what they may push.
 	// It is never placed in a cookie.
 	Scope *IngestScope `json:"scope,omitempty"`
@@ -119,6 +125,17 @@ func (s IngestScope) AllowsType(t string) bool {
 // TenantPattern is what a tenant id looks like. It has no dots, so it can
 // sit inside the dotted session cookie.
 var TenantPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
+
+// WithClearance returns the identity with a clearance level. The name is
+// checked against marking.Pattern; whether it is a level of the configured
+// scheme is checked where the scheme is known.
+func (id Identity) WithClearance(level string) (Identity, error) {
+	if level != "" && !marking.Pattern.MatchString(level) {
+		return Identity{}, fmt.Errorf("invalid clearance %q", level)
+	}
+	id.Clearance = level
+	return id, nil
+}
 
 // TenantRoles are the roles a tenant-bound identity may hold. Admin, executor
 // and the machine roles are deployment-wide by nature.
@@ -189,6 +206,8 @@ type LocalUser struct {
 	Default bool
 	// Tenant confines the account to one tenant's workspace.
 	Tenant string
+	// Clearance is the account's data clearance; empty is the lowest.
+	Clearance string
 }
 
 type Auth struct {
@@ -267,8 +286,8 @@ func (a *Auth) mac(parts ...string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
-func (a *Auth) sign(exp int64, method, roles, tenant, operator string) string {
-	return a.mac("zyntra-session.v3", strconv.FormatInt(exp, 10), method, roles, tenant, operator)
+func (a *Auth) sign(exp int64, method, roles, tenant, clearance, operator string) string {
+	return a.mac("zyntra-session.v4", strconv.FormatInt(exp, 10), method, roles, tenant, clearance, operator)
 }
 
 // Operator normalizes a display name recorded in the audit trail.
@@ -299,9 +318,9 @@ func joinRoles(roles []Role) string {
 }
 
 // Mint returns a cookie value for an identity valid for ttl. The format is
-// exp.method.roles.tenant.operator.sig ("-" for no tenant); operator may
-// itself contain dots. Cookies from before tenants existed fail the
-// signature check and sign-in is asked for again.
+// exp.method.roles.tenant.clearance.operator.sig ("-" for no tenant or no
+// clearance); operator may itself contain dots. Cookies from before
+// clearances existed fail the signature check and sign-in is asked for again.
 func (a *Auth) Mint(ttl time.Duration, id Identity) (string, time.Time) {
 	op := Operator(id.Subject)
 	roles := joinRoles(normalize(id.Roles))
@@ -313,9 +332,13 @@ func (a *Auth) Mint(ttl time.Duration, id Identity) (string, time.Time) {
 	if tenant == "" {
 		tenant = "-"
 	}
+	clearance := id.Clearance
+	if clearance == "" {
+		clearance = "-"
+	}
 	exp := a.now().Add(ttl)
 	e := exp.Unix()
-	return strings.Join([]string{strconv.FormatInt(e, 10), method, roles, tenant, op, a.sign(e, method, roles, tenant, op)}, "."), exp
+	return strings.Join([]string{strconv.FormatInt(e, 10), method, roles, tenant, clearance, op, a.sign(e, method, roles, tenant, clearance, op)}, "."), exp
 }
 
 // Valid returns the identity in an unexpired, correctly signed cookie.
@@ -324,16 +347,16 @@ func (a *Auth) Valid(v string) (Identity, bool) {
 		return Identity{}, false
 	}
 	parts := strings.Split(v, ".")
-	if len(parts) < 6 {
+	if len(parts) < 7 {
 		return Identity{}, false
 	}
-	expStr, method, roles, tenant, sig := parts[0], parts[1], parts[2], parts[3], parts[len(parts)-1]
-	op := strings.Join(parts[4:len(parts)-1], ".")
+	expStr, method, roles, tenant, clearance, sig := parts[0], parts[1], parts[2], parts[3], parts[4], parts[len(parts)-1]
+	op := strings.Join(parts[5:len(parts)-1], ".")
 	exp, err := strconv.ParseInt(expStr, 10, 64)
 	if err != nil || a.now().Unix() >= exp || Operator(op) != op {
 		return Identity{}, false
 	}
-	if !hmac.Equal([]byte(sig), []byte(a.sign(exp, method, roles, tenant, op))) {
+	if !hmac.Equal([]byte(sig), []byte(a.sign(exp, method, roles, tenant, clearance, op))) {
 		return Identity{}, false
 	}
 	var rs []Role
@@ -344,6 +367,12 @@ func (a *Auth) Valid(v string) (Identity, bool) {
 	if tenant != "-" {
 		var err error
 		if id, err = id.WithTenant(tenant); err != nil {
+			return Identity{}, false
+		}
+	}
+	if clearance != "-" {
+		var err error
+		if id, err = id.WithClearance(clearance); err != nil {
 			return Identity{}, false
 		}
 	}
@@ -459,6 +488,11 @@ func (a *Auth) Routes(mux *http.ServeMux) {
 				return
 			}
 			id = newIdentity(Operator(u.Name), "password", u.Roles...)
+			var cerr error
+			if id, cerr = id.WithClearance(u.Clearance); cerr != nil {
+				writeErr(w, http.StatusForbidden, "this account is misconfigured; ask an administrator")
+				return
+			}
 			if u.Tenant != "" {
 				var err error
 				if id, err = id.WithTenant(u.Tenant); err != nil {

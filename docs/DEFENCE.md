@@ -29,6 +29,45 @@ on high-risk ones, never lets the proposer approve their own, and blocks
 approval on stale inputs. Add local users or an OIDC role map for the roles you
 need.
 
+## Data markings and clearance
+
+A `markings:` block in the policy file turns on ordered data markings:
+
+```yaml
+markings:
+  levels: [unclassified, cui, cui-specified]   # least restricted first
+users:
+  - {name: ana, passwordHash: "...", roles: [viewer], clearance: cui}
+```
+
+- Mark a KPI or action in `kpis.yaml` (`marking: cui`) or an ontology type or
+  property in `ontology.yaml`. Unmarked means the first level.
+- An account's `clearance` is the highest level it may see. With OIDC, set
+  `ZYNTRA_OIDC_CLEARANCE_MAP="group=level,group2=level"`; a user in several
+  mapped groups gets the highest. Everyone else gets the first level.
+- Clearance, not role, decides: an administrator without the clearance does not
+  see marked data. The break-glass access key and service tokens carry no
+  clearance, so they see only unmarked data.
+- Below its clearance, a caller does not see marked KPIs at all: not in the
+  graph, gaps, plans, forecasts, briefs, watches, the source list or the AI
+  snapshot. Edges, constraints and any action that depends on a hidden KPI go
+  with it, so a plan can never name or price something the caller cannot see.
+  Marked ontology types and properties are filtered on every read.
+- A proposal is hidden from a caller who cannot see all of its actions: it is
+  missing from lists, decisions, audit and exports and answers 404 by id, and
+  it cannot be approved by that caller.
+- Markings are validated at start: an unknown level, a marking with no
+  `markings:` block, or a user clearance outside the levels stops Zyntra.
+- Session cookies now carry the clearance and are signed over it. Existing
+  sessions end once after an upgrade and users sign in again.
+
+Limits: this separates what people can see inside one Zyntra instance. It is
+not a multi-level-secure system and makes no accreditation claim. Marked data
+is still stored together, and a marked item's existence may be inferable from
+timing or from counts outside the filtered views. Packs do not ship marked
+items, because a marking needs the policy block; mark the ones you need. The
+console does not yet display marking labels.
+
 ## Air-gapped use
 
 No plan, approval or execution needs a model or a network. To use the AI

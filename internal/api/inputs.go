@@ -29,7 +29,7 @@ func channelKPIs(m *graph.Model, name string) []string {
 // handleIngest stores a document POSTed by a gateway; the last one wins.
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	kpis := channelKPIs(m, name)
 	if len(kpis) == 0 {
 		writeErr(w, http.StatusNotFound, "no KPI reads webhook-in channel "+name)
@@ -52,7 +52,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 // Every entry is written to the audit chain.
 func (s *Server) handleManualValue(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	k, ok := m.KPI(id)
 	if !ok {
 		writeErr(w, http.StatusNotFound, "unknown kpi")
@@ -113,8 +113,8 @@ type channelView struct {
 }
 
 // handleInputs lists manual KPIs and webhook-in channels.
-func (s *Server) handleInputs(w http.ResponseWriter, _ *http.Request) {
-	m, _ := s.snapshot()
+func (s *Server) handleInputs(w http.ResponseWriter, r *http.Request) {
+	m, _ := s.snapshotFor(r)
 	manual := []manualView{}
 	channels := []channelView{}
 	seen := map[string]bool{}

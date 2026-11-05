@@ -49,7 +49,7 @@ func (s *Server) handleWatches(w http.ResponseWriter, r *http.Request) {
 	if !s.watchReady(w) {
 		return
 	}
-	writeJSON(w, 200, s.opt.Watches.View(auth.FromContext(r.Context()).Tenant))
+	writeJSON(w, 200, s.watchView(r))
 }
 func (s *Server) handleWatchPut(w http.ResponseWriter, r *http.Request) {
 	if !s.watchReady(w) {
@@ -73,7 +73,7 @@ func (s *Server) handleWatchPut(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "threshold, durations, enabled and expected_version are required")
 		return
 	}
-	m, _ := s.snapshot()
+	m, _ := s.snapshotFor(r)
 	k, ok := m.KPI(req.Metric)
 	if !ok {
 		writeErr(w, 400, "metric unavailable")
