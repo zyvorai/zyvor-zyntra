@@ -461,6 +461,12 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		}
 		store.OnEvent(nt.Event)
 	}
+	if authn != nil {
+		authn.OnLock(func(kind, key string) {
+			log.Printf("auth: sign-in locked for %s %q after repeated failures", kind, key)
+			_ = store.Note("auth", "system", fmt.Sprintf("sign-in locked for %s %s after repeated failed attempts", kind, key))
+		})
+	}
 	mode, err := executor.ParseMode(env("ZYNTRA_EXECUTE", "dry-run"))
 	if err != nil {
 		return nil, nil, err
@@ -722,10 +728,43 @@ func defaultAdmin() (auth.LocalUser, error) {
 	return auth.LocalUser{Name: name, Hash: string(hash), Roles: []auth.Role{auth.RoleAdmin}, Default: shipped}, nil
 }
 
+// throttleFromEnv reads the sign-in throttle: ZYNTRA_LOGIN_MAX_FAILURES wrong
+// credentials per account within 15 minutes (default 5, 0 turns it off),
+// ZYNTRA_LOGIN_LOCKOUT as the lock time (default 15m), and
+// ZYNTRA_TRUSTED_PROXIES, the proxies whose X-Forwarded-For is believed.
+func throttleFromEnv() (auth.ThrottleConfig, error) {
+	cfg := auth.DefaultThrottle()
+	if v := env("ZYNTRA_LOGIN_MAX_FAILURES", ""); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return cfg, fmt.Errorf("ZYNTRA_LOGIN_MAX_FAILURES must be a whole number, 0 or more")
+		}
+		cfg.MaxFailures = n
+	}
+	if v := env("ZYNTRA_LOGIN_LOCKOUT", ""); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil || d <= 0 {
+			return cfg, fmt.Errorf("ZYNTRA_LOGIN_LOCKOUT must be a duration such as 15m")
+		}
+		cfg.Lockout = d
+	}
+	proxies, err := auth.ParseTrustedProxies(env("ZYNTRA_TRUSTED_PROXIES", ""))
+	if err != nil {
+		return cfg, fmt.Errorf("ZYNTRA_TRUSTED_PROXIES: %w", err)
+	}
+	cfg.TrustedProxies = proxies
+	return cfg, nil
+}
+
 // buildAuth sets up the admin key, Keep's exec token, local users from the
 // policy file and OIDC from the environment.
 func buildAuth(ctx context.Context, pol *policy.Policy) (*auth.Auth, error) {
 	a := auth.New(env("ZYNTRA_API_KEY", ""), env("ZYNTRA_EXEC_TOKEN", ""))
+	th, err := throttleFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	a.SetThrottle(th)
 	a.SetSessionSecret(env("ZYNTRA_SESSION_SECRET", ""))
 	a.SetIngestToken(env("ZYNTRA_INGEST_TOKEN", ""))
 	a.SetDeployToken(env("ZYNTRA_DEPLOY_TOKEN", ""))

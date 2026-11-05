@@ -63,7 +63,7 @@ defaults these rows assume.
 | Identify and authenticate users | provided | Local bcrypt accounts and OIDC with PKCE (`internal/auth/auth.go`, `internal/auth/oidc.go`) |
 | Multi-factor authentication | delegated | Not in the code. Use an OIDC provider that enforces MFA |
 | Replay-resistant authentication | partial | OIDC uses a nonce and state cookie (`internal/auth/oidc.go`). Local accounts use a password only |
-| Password strength, lockout | gap | No password policy and no login rate limit or lockout in the code; enforce at the identity provider or ingress |
+| Password strength, lockout | partial | Failed sign-ins at `POST /api/v1/session` are counted per account and per client address and lock them for a while, audited and logged (`internal/auth/throttle.go`); on by default, in memory, and not applied to bearer tokens. There is still no password-strength policy; enforce it at the identity provider |
 | Default credentials | partial | A built-in `admin` account exists until you set `ZYNTRA_ADMIN_PASSWORD` or define users; the console warns (`SECURITY.md`) |
 
 ## 3.6 Incident response (IR)

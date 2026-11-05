@@ -221,6 +221,7 @@ type Auth struct {
 	services  []ServiceCredential
 	oidc      *oidcState
 	now       func() time.Time
+	throttle  *throttle
 }
 
 // New returns an Auth. With no apiKey, local users or OIDC the API is open.
@@ -250,6 +251,27 @@ func (a *Auth) SetIngestToken(s string) { a.ingestKey = []byte(s) }
 // SetDeployToken sets the bearer token the deployment tooling uses to report
 // rollout progress. It grants nothing else.
 func (a *Auth) SetDeployToken(s string) { a.deployKey = []byte(s) }
+
+// SetThrottle limits failed sign-ins at POST /api/v1/session: a wrong password
+// or access key counts against the account name and the client address, and
+// too many lock them for a while. A zero MaxFailures turns it off. Bearer
+// tokens are not throttled; they are high-entropy secrets, not passwords.
+func (a *Auth) SetThrottle(cfg ThrottleConfig) {
+	old := a.throttle
+	a.throttle = newThrottle(cfg, func() time.Time { return a.now() })
+	if old != nil {
+		a.throttle.notify = old.notify
+	}
+}
+
+// OnLock is called when a lock starts, with kind "account" or "address" and
+// the account name or client address. Use it to write the audit record.
+func (a *Auth) OnLock(fn func(kind, key string)) {
+	if a.throttle == nil {
+		a.throttle = newThrottle(DefaultThrottle(), func() time.Time { return a.now() })
+	}
+	a.throttle.notify = func(_, kind, key string) { fn(kind, key) }
+}
 
 // SetUsers enables local accounts.
 func (a *Auth) SetUsers(users []LocalUser) {
@@ -477,16 +499,39 @@ func (a *Auth) Routes(mux *http.ServeMux) {
 			writeJSON(w, http.StatusOK, map[string]any{"ok": true, "mode": "open"})
 			return
 		}
+		th := a.throttle
+		addr := th.clientAddr(r)
+		account := ""
+		if req.Token == "" && req.Username != "" {
+			account = strings.ToLower(strings.TrimSpace(req.Username))
+		}
+		// While locked, the credentials are still checked (so the response
+		// takes as long as any other) but cannot succeed.
+		wait := th.locked(account, addr)
+		refuse := func() {
+			if wait > 0 {
+				w.Header().Set("Retry-After", retryAfter(wait))
+			}
+			writeErr(w, http.StatusUnauthorized, "invalid credentials")
+		}
 		var id Identity
 		switch {
 		case req.Token != "" && secureEq(a.key, []byte(req.Token)):
+			if wait > 0 {
+				refuse()
+				return
+			}
 			id = newIdentity(Operator(req.Operator), "key", RoleAdmin)
 		case req.Username != "" && len(a.users) > 0:
 			u, ok := a.checkPassword(req.Username, req.Password)
-			if !ok {
-				writeErr(w, http.StatusUnauthorized, "invalid credentials")
+			if !ok || wait > 0 {
+				if wait == 0 {
+					th.fail(account, addr)
+				}
+				refuse()
 				return
 			}
+			th.succeed(account)
 			id = newIdentity(Operator(u.Name), "password", u.Roles...)
 			var cerr error
 			if id, cerr = id.WithClearance(u.Clearance); cerr != nil {
@@ -501,7 +546,10 @@ func (a *Auth) Routes(mux *http.ServeMux) {
 				}
 			}
 		default:
-			writeErr(w, http.StatusUnauthorized, "invalid credentials")
+			if wait == 0 {
+				th.fail(account, addr)
+			}
+			refuse()
 			return
 		}
 		ttl := SessionTTL

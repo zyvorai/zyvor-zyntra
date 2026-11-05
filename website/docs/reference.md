@@ -14,6 +14,9 @@ Configuration variables, the CLI and the HTTP API. Feature-specific routes are d
 | `ZYNTRA_ADMIN_USER` / `ZYNTRA_ADMIN_PASSWORD` | Built-in local admin when the policy file has no users (default `admin` / `Admin@321`, flagged in the console until changed). `ZYNTRA_DEFAULT_ADMIN=off` removes it, and with no key, OIDC or users the console then runs open (dev only) |
 | `ZYNTRA_POLICY` | Policy file (same as `serve -policy`) |
 | `ZYNTRA_SESSION_SECRET` | Key for session cookies (defaults to the access key; set it so sign-ins survive key rotation and restarts) |
+| `ZYNTRA_LOGIN_MAX_FAILURES` | Wrong credentials one account may present within 15 minutes before it is locked (default `5`; `0` turns the throttle off). A client address gets four times as many, so a shared address does not lock itself out |
+| `ZYNTRA_LOGIN_LOCKOUT` | How long a locked account or address stays locked (default `15m`). A locked sign-in is refused even with the right password, with the same `401 invalid credentials` and a `Retry-After`, so a lock does not reveal which accounts exist. State is in memory and resets on restart |
+| `ZYNTRA_TRUSTED_PROXIES` | Comma-separated addresses or CIDRs of reverse proxies whose `X-Forwarded-For` is believed when working out the client address (the right-most entry that is not itself a trusted proxy). Without it the header is ignored, because any client can send it |
 | `ZYNTRA_OIDC_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET` | OpenID Connect sign-in |
 | `ZYNTRA_OIDC_ROLE_MAP` | `group=role[+role],…` mapping from IdP groups to Zyntra roles |
 | `ZYNTRA_OIDC_REDIRECT_URL`, `_GROUPS_CLAIM`, `_SCOPES`, `_DEFAULT_ROLE` | Optional: callback URL (default derived from the request), groups claim (`groups`), scopes, role for unmapped users |
