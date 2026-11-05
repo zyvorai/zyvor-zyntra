@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zyvorai/zyntra/internal/egress"
 	"github.com/zyvorai/zyntra/internal/graph"
 )
 
@@ -152,5 +153,49 @@ func TestFileAndNoop(t *testing.T) {
 	}
 	if res := ex.Execute(context.Background(), r); !res.OK || res.Kind != graph.KindNoop {
 		t.Fatalf("noop: %+v", res)
+	}
+}
+
+func TestWebhookBlockedByEgressPolicy(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer srv.Close()
+	m := shopModel(t)
+	a, _ := m.Action("reorder")
+	r, err := RenderIn(m, *a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ZYNTRA_TEST_ERP", srv.URL+"?token=s3cret")
+	t.Setenv("ZYNTRA_TEST_ERP_TOKEN", "tok-123")
+
+	deny, err := egress.New(egress.Config{Default: "deny"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := (&Executor{Mode: ModeApply, HTTP: deny.Client(nil, egress.Webhook)}).Execute(context.Background(), r)
+	if res.OK || !strings.Contains(res.Error, "egress blocked") {
+		t.Fatalf("want an egress refusal: %+v", res)
+	}
+	if hits != 0 {
+		t.Fatal("the blocked webhook reached the server")
+	}
+	if strings.Contains(res.Error, "s3cret") || strings.Contains(res.Error, "tok-123") {
+		t.Errorf("secret in error: %s", res.Error)
+	}
+
+	allow, err := egress.New(egress.Config{
+		Destinations: map[string][]string{"lo": {"127.0.0.0/8"}},
+		Rules:        []egress.Rule{{Allow: []string{"lo"}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res = (&Executor{Mode: ModeApply, HTTP: allow.Client(nil, egress.Webhook)}).Execute(context.Background(), r)
+	if !res.OK || hits != 1 {
+		t.Fatalf("an allowed webhook should be sent: %+v hits=%d", res, hits)
 	}
 }

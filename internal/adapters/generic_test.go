@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zyvorai/zyntra/internal/egress"
 	"github.com/zyvorai/zyntra/internal/graph"
 	"github.com/zyvorai/zyntra/internal/inputs"
 )
@@ -175,5 +176,42 @@ actions: []
 	}
 	if upi.State != StateStale {
 		t.Errorf("webhook:upi state = %q, want stale", upi.State)
+	}
+}
+
+func TestHTTPSourceBlockedByEgressPolicy(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		_, _ = w.Write([]byte(`{"v":9}`))
+	}))
+	defer srv.Close()
+	t.Setenv("ZYNTRA_TEST_POS", srv.URL)
+	m := model(t, `
+name: t
+kpis:
+  - {id: sales, value: 1, source: {kind: http, url: "${ZYNTRA_TEST_POS}/x", field: v}}
+edges: []
+actions: []
+`)
+	deny, err := egress.New(egress.Config{Default: "deny"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, _ := Refresh(context.Background(), m, Config{HTTP: deny.Client(nil, egress.Source)})
+	if k, _ := m.KPI("sales"); k.Value != 1 {
+		t.Fatalf("a blocked source must keep the fallback value, got %v", k.Value)
+	}
+	if hits != 0 {
+		t.Fatal("the blocked source was fetched")
+	}
+	found := false
+	for _, s := range rep.Sources {
+		if strings.Contains(s.Error, "egress blocked") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the source status should say egress blocked: %+v", rep.Sources)
 	}
 }

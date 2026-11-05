@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/zyvorai/zyntra/internal/auth"
 	"github.com/zyvorai/zyntra/internal/ontology"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -19,6 +20,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/zyvorai/zyntra/internal/calendar"
+	"github.com/zyvorai/zyntra/internal/egress"
+	"github.com/zyvorai/zyntra/internal/envx"
 	"github.com/zyvorai/zyntra/internal/graph"
 	"github.com/zyvorai/zyntra/internal/marking"
 )
@@ -147,6 +150,11 @@ type Policy struct {
 	// ontology types and properties may carry, and that accounts hold as a
 	// clearance. Without it nothing is marked and everything is visible.
 	Markings *marking.Scheme `yaml:"markings,omitempty" json:"markings,omitempty"`
+	// Egress limits which hosts Zyntra sends to and fetches from. Without it
+	// nothing is restricted.
+	Egress *egress.Config `yaml:"egress,omitempty" json:"egress,omitempty"`
+
+	guard *egress.Guard
 }
 
 // Effective is the merged policy for one proposal.
@@ -211,6 +219,14 @@ func (p *Policy) validate() error {
 				return fmt.Errorf("rule %d: unknown maintenance window %q", i, w)
 			}
 		}
+	}
+	p.guard = nil
+	if p.Egress != nil {
+		g, err := egress.New(*p.Egress)
+		if err != nil {
+			return fmt.Errorf("egress: %w", err)
+		}
+		p.guard = g
 	}
 	if d := p.Revalidation.MaxDrift; d != nil && (*d < 0 || *d > 1) {
 		return fmt.Errorf("revalidation.maxDrift must be between 0 and 1")
@@ -339,10 +355,60 @@ func (p *Policy) Scheme() *marking.Scheme {
 	return p.Markings
 }
 
-// CheckModel reports actions that name unknown windows and KPIs or actions
-// carrying a marking the policy does not define. Call UseModel first so model
-// calendars count.
+// EgressGuard returns the egress guard, or nil when the policy has none (a nil
+// guard allows everything).
+func (p *Policy) EgressGuard() *egress.Guard {
+	if p == nil {
+		return nil
+	}
+	return p.guard
+}
+
+// checkEgress rejects configured webhook and source URLs whose host the egress
+// policy forbids. A URL whose variables are not set yet cannot be checked and
+// is left to the runtime guard.
+func (p *Policy) checkEgress(m *graph.Model) error {
+	if p.guard == nil {
+		return nil
+	}
+	check := func(what, purpose, raw string) error {
+		u, missing := envx.Expand(raw)
+		if len(missing) > 0 {
+			return nil
+		}
+		pu, err := url.Parse(u)
+		if err != nil || pu.Host == "" {
+			return nil
+		}
+		if err := p.guard.Static(purpose, pu.Host); err != nil {
+			return fmt.Errorf("%s: %w", what, err)
+		}
+		return nil
+	}
+	for _, a := range m.Actions {
+		if a.Webhook != nil {
+			if err := check("action "+a.ID, egress.Webhook, a.Webhook.URL); err != nil {
+				return err
+			}
+		}
+	}
+	for _, k := range m.KPIs {
+		if k.Source != nil && (k.Source.Kind == graph.SourceHTTP || k.Source.Kind == graph.SourceSheet) {
+			if err := check("kpi "+k.ID, egress.Source, k.Source.URL); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// CheckModel reports actions that name unknown windows, KPIs or actions
+// carrying a marking the policy does not define, and URLs the egress policy
+// forbids. Call UseModel first so model calendars count.
 func (p *Policy) CheckModel(m *graph.Model) error {
+	if err := p.checkEgress(m); err != nil {
+		return err
+	}
 	for _, k := range m.KPIs {
 		if k.Marking == "" {
 			continue

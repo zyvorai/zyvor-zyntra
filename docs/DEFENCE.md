@@ -96,9 +96,41 @@ OpenAI-compatible endpoint (see "Air-gapped model" in `REFERENCE.md`). Decisions
 sit in a hash-chained audit log (`/api/v1/audit/verify`) and can be exported
 with an Ed25519 signature.
 
+## Egress controls
+
+An `egress:` block in the policy file limits where Zyntra may send data or
+fetch it from. It covers action webhooks, `http` and `sheet` KPI sources, the AI
+endpoint, Fabric Keep and notifications.
+
+```yaml
+egress:
+  default: deny                 # for any purpose no rule covers
+  destinations:
+    private: [10.0.0.0/8, "*.internal"]
+  rules:
+    - {name: webhooks-stay-private, purposes: [webhook, ai], allow: [private]}
+```
+
+- An entry is a host name, `*.suffix` (subdomains only), an IP or CIDR, or `*`.
+- Purposes are `webhook`, `source`, `ai`, `keep` and `notify`. A purpose that a
+  rule covers may reach only the groups those rules allow; others follow `default`.
+- Checks happen before a connection is made. For a destination allowed only by
+  network, the name is resolved once and the connection goes to an allowed
+  address, so a DNS answer cannot redirect it. A redirect to another host is refused.
+- At start, configured webhook and source URLs are checked, and a forbidden
+  host stops Zyntra with a message naming the action or KPI. URLs whose
+  `${ZYNTRA_*}` variables are not set yet are checked when used.
+- A guarded client connects directly and ignores proxy environment variables.
+- Without an `egress:` block nothing is restricted. `examples/policy-defence.yaml`
+  restricts everything to private networks.
+
+This controls where traffic may go. It does not look inside the data, and it
+does not stop an approver from approving an action whose destination you
+allowed.
+
 ## What Zyntra does not do yet
 
-CUI marking, classification levels, ITAR data-residency enforcement and any
+CUI marking and classification levels, data-residency rules that depend on what the data is (egress controls above only look at the destination), and any
 FedRAMP or CMMC certification. The packs read ids, statuses and counts only;
 keep CUI out of the exports. Those controls would be core features, not packs.
 
