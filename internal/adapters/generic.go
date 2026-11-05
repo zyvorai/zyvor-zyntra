@@ -368,14 +368,23 @@ func (r *run) generic(ctx context.Context, m *graph.Model, k *graph.KPI) (v floa
 }
 
 func (r *run) fetch(ctx context.Context, u string, s graph.Source) (any, error) {
+	doc, n, err := r.getWithRetry(ctx, u, s)
+	if err != nil || s.Next == "" {
+		return doc, err
+	}
+	return r.pages(ctx, u, s, doc, n)
+}
+
+// get makes one request. retry is true for an answer worth trying again.
+func (r *run) get(ctx context.Context, u string, s graph.Source) (doc any, n int, retry bool, wait time.Duration, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, false, 0, err
 	}
 	for h, v := range s.Headers {
 		val, missing := envx.Expand(v)
 		if len(missing) > 0 {
-			return nil, fmt.Errorf("header %s: set %s", h, strings.Join(missing, ", "))
+			return nil, 0, false, 0, fmt.Errorf("header %s: set %s", h, strings.Join(missing, ", "))
 		}
 		req.Header.Set(h, val)
 	}
@@ -389,21 +398,147 @@ func (r *run) fetch(ctx context.Context, u string, s graph.Source) (any, error) 
 		if ue, ok := errors.AsType[*url.Error](err); ok {
 			err = ue.Err
 		}
-		return nil, fmt.Errorf("GET %s: %w", req.URL.Host, err)
+		return nil, 0, false, 0, fmt.Errorf("GET %s: %w", req.URL.Host, err)
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(io.LimitReader(resp.Body, maxDoc))
 	if err != nil {
-		return nil, err
+		return nil, 0, false, 0, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+		retry = resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500
+		if secs, e := strconv.Atoi(resp.Header.Get("Retry-After")); e == nil && secs > 0 {
+			wait = min(time.Duration(secs)*time.Second, maxRetryWait)
+		}
+		return nil, len(b), retry, wait, fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 	format := s.Format
 	if s.Kind == graph.SourceSheet && format == "" {
 		format = "csv"
 	}
-	return Parse(formatFor(format, "", resp.Header.Get("Content-Type")), b)
+	doc, err = Parse(formatFor(format, "", resp.Header.Get("Content-Type")), b)
+	return doc, len(b), false, 0, err
+}
+
+// retryBase is the first pause between attempts; it doubles each time.
+var retryBase = 250 * time.Millisecond
+
+const maxRetryWait = 5 * time.Second
+
+// getWithRetry tries a request again after HTTP 429 or 5xx, up to s.Retries
+// times. Anything else, including a timeout, is returned at once.
+func (r *run) getWithRetry(ctx context.Context, u string, s graph.Source) (any, int, error) {
+	for attempt := 0; ; attempt++ {
+		doc, n, retry, wait, err := r.get(ctx, u, s)
+		if err == nil || !retry || attempt >= s.Retries {
+			return doc, n, err
+		}
+		if wait == 0 {
+			wait = min(retryBase<<attempt, maxRetryWait)
+		}
+		select {
+		case <-ctx.Done():
+			return nil, 0, ctx.Err()
+		case <-time.After(wait):
+		}
+	}
+}
+
+// pages follows s.Next from the first page, joining the lists at s.Items.
+// The next URL must stay on the first URL's scheme and host, so a token
+// sent in a header can never follow a link to another server.
+func (r *run) pages(ctx context.Context, first string, s graph.Source, doc any, total int) (any, error) {
+	base, err := url.Parse(first)
+	if err != nil {
+		return nil, err
+	}
+	maxPages := s.MaxPages
+	if maxPages == 0 {
+		maxPages = 20
+	}
+	var items []any
+	seen := map[string]bool{first: true}
+	cur := doc
+	for page := 1; ; page++ {
+		got, ok := listAt(cur, s.Items)
+		if !ok {
+			return nil, fmt.Errorf("page %d: no list at %q", page, s.Items)
+		}
+		items = append(items, got...)
+		next, _ := lookup(cur, s.Next)
+		ns, _ := next.(string)
+		if strings.TrimSpace(ns) == "" {
+			break
+		}
+		nu, err := base.Parse(ns)
+		if err != nil {
+			return nil, fmt.Errorf("page %d: bad next link", page)
+		}
+		if nu.Scheme != base.Scheme || !strings.EqualFold(nu.Host, base.Host) {
+			return nil, fmt.Errorf("page %d: next link points to another host (%s)", page, nu.Host)
+		}
+		if seen[nu.String()] {
+			return nil, fmt.Errorf("page %d: next link repeats an earlier page", page)
+		}
+		if page >= maxPages {
+			return nil, fmt.Errorf("more than %d pages; raise maxPages if that is expected", maxPages)
+		}
+		seen[nu.String()] = true
+		var n int
+		if cur, n, err = r.getWithRetry(ctx, nu.String(), s); err != nil {
+			return nil, fmt.Errorf("page %d: %w", page+1, err)
+		}
+		if total += n; total > maxDoc {
+			return nil, fmt.Errorf("pages are larger than %d MiB together", maxDoc>>20)
+		}
+	}
+	return items, nil
+}
+
+// splitPath splits a dotted path; "\\." keeps a dot inside a key.
+func splitPath(p string) []string {
+	var out []string
+	var cur strings.Builder
+	for i := 0; i < len(p); i++ {
+		switch {
+		case p[i] == '\\' && i+1 < len(p) && p[i+1] == '.':
+			cur.WriteByte('.')
+			i++
+		case p[i] == '.':
+			out = append(out, cur.String())
+			cur.Reset()
+		default:
+			cur.WriteByte(p[i])
+		}
+	}
+	return append(out, cur.String())
+}
+
+// lookup follows a dotted path through nested objects.
+func lookup(doc any, path string) (any, bool) {
+	if path == "" {
+		return doc, true
+	}
+	cur := doc
+	for _, k := range splitPath(path) {
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		if cur, ok = m[k]; !ok {
+			return nil, false
+		}
+	}
+	return cur, true
+}
+
+func listAt(doc any, path string) ([]any, bool) {
+	v, ok := lookup(doc, path)
+	if !ok {
+		return nil, false
+	}
+	l, ok := v.([]any)
+	return l, ok
 }
 
 // FormatOf guesses a document format from a file name.

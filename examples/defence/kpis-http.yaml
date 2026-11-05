@@ -1,0 +1,121 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Template: KPIs read live from three paged JSON exports (maintenance, supply,
+# GRC) instead of CSV files. It is a starting point, not a connector for any
+# particular product: change the URLs, the list paths (`items`), the paging
+# link (`next`) and the field names to match your systems' exports.
+#
+# Bind these on the Zyntra host (never put values in this file):
+#
+#   ZYNTRA_MAINT_URL / ZYNTRA_MAINT_TOKEN     maintenance export base URL and bearer token
+#   ZYNTRA_SUPPLY_URL / ZYNTRA_SUPPLY_TOKEN   supply export
+#   ZYNTRA_GRC_URL / ZYNTRA_GRC_TOKEN         GRC export
+#
+# Each source follows `next` links only on the host it started on, so the token
+# is never sent anywhere else, and retries only HTTP 429 and 5xx answers.
+# Try it without any real system:
+#
+#   zyntra fake-sources -addr 127.0.0.1:19700 &
+#   export ZYNTRA_MAINT_URL=http://127.0.0.1:19700/defence/maintenance \
+#          ZYNTRA_SUPPLY_URL=http://127.0.0.1:19700/defence/supply \
+#          ZYNTRA_GRC_URL=http://127.0.0.1:19700/defence/grc \
+#          ZYNTRA_MAINT_TOKEN=fake-defence-token ZYNTRA_SUPPLY_TOKEN=fake-defence-token \
+#          ZYNTRA_GRC_TOKEN=fake-defence-token
+#   zyntra serve -f examples/defence/kpis-http.yaml
+name: defence-live-template
+
+kpis:
+  - id: open_work_orders
+    name: Open work orders
+    unit: orders
+    owner: maintenance
+    value: 0
+    target: 3
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MAINT_URL}/work-orders
+      headers: {Authorization: "Bearer ${ZYNTRA_MAINT_TOKEN}"}
+      next: links.next              # the JSON path to the next page's URL
+      items: data.orders            # the list on each page
+      retries: 2
+      field: "#(state=open)"
+
+  - id: open_work_order_age_days
+    name: Average age of open work orders
+    unit: d
+    owner: maintenance
+    value: 0
+    target: 5
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MAINT_URL}/work-orders
+      headers: {Authorization: "Bearer ${ZYNTRA_MAINT_TOKEN}"}
+      next: links.next
+      items: data.orders
+      retries: 2
+      field: "*.age_days"
+      where: {state: open}
+      agg: avg
+
+  - id: backordered_requisitions
+    name: Backordered requisitions
+    unit: requisitions
+    owner: supply
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_SUPPLY_URL}/requisitions
+      headers: {Authorization: "Bearer ${ZYNTRA_SUPPLY_TOKEN}"}
+      next: '@odata\.nextLink'      # a dot inside a key is escaped with a backslash
+      items: value
+      retries: 2
+      field: "#(status=backordered)"
+
+  - id: parts_fill_rate
+    name: Parts fill rate
+    owner: supply
+    value: 0
+    target: 0.9
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_SUPPLY_URL}/requisitions
+      headers: {Authorization: "Bearer ${ZYNTRA_SUPPLY_TOKEN}"}
+      next: '@odata\.nextLink'
+      items: value
+      retries: 2
+      field: "*.filled"
+      denominator: "*.requested"
+
+  - id: controls_implemented_ratio
+    name: Controls implemented
+    owner: compliance
+    value: 0
+    target: 1
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_GRC_URL}/controls
+      headers: {Authorization: "Bearer ${ZYNTRA_GRC_TOKEN}"}
+      next: meta.next
+      items: results
+      retries: 2
+      field: "#(status=implemented)"
+      denominator: "#"
+
+edges:
+  - {from: parts_fill_rate, to: backordered_requisitions, weight: -0.5, confidence: 0.5, why: unfilled requests are backorders}
+
+actions: []

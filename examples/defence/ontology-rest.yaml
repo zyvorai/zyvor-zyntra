@@ -1,0 +1,37 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Template: business objects read from the same exports through the `rest`
+# connector (paging, bearer auth, since-parameter and secret-free errors are
+# built in). Put it beside a pack's kpis.yaml as ontology.yaml, or copy the
+# connectors into an existing one. Tested against fake servers only; field
+# names are yours to change.
+#
+#   ZYNTRA_MAINT_TOKEN   the bearer token (the credential comes from the environment;
+#                        the URL below is written out, because a connector URL is
+#                        part of the pack, not a variable)
+name: defence-live-template
+
+objects:
+  - name: WorkOrder
+    kpis: [open_work_orders]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: asset, type: string}
+      - {name: state, type: string}
+      - {name: age_days, type: number}
+
+links: []
+
+refresh_interval: 5m
+
+connectors:
+  - name: maintenance-work-orders
+    kind: rest
+    url: https://maintenance.example.internal/api/work-orders   # replace with your export
+    token_env: ZYNTRA_MAINT_TOKEN      # bearer; user_env + pass_env for basic auth
+    items: data.orders
+    next: links.next
+    prune: true                        # a full listing: orders that disappear leave the ontology
+    fields: {id: id, asset: asset_id, state: state, age: age_days}
+    mapping: {type: WorkOrder, namespace: maint, key: id, props: {name: id, asset: asset, state: state, age_days: age}}
