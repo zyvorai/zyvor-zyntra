@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/zyvorai/zyntra/internal/approvals"
+	"github.com/zyvorai/zyntra/internal/egress"
 )
 
 // Config says where to post and which transitions to announce.
@@ -31,6 +32,8 @@ type Config struct {
 	On []approvals.Status
 	// ConsoleURL, when set, turns each message into a link to the proposal.
 	ConsoleURL string
+	// Guard, when set, limits which hosts notifications may reach.
+	Guard *egress.Guard
 }
 
 // Message is the JSON body. It carries the transition and who made it, never
@@ -80,6 +83,7 @@ func New(ctx context.Context, cfg Config) (*Notifier, error) {
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 		},
 	}
+	n.client = cfg.Guard.Client(n.client, egress.Notify)
 	on := cfg.On
 	if len(on) == 0 {
 		on = []approvals.Status{approvals.Pending}

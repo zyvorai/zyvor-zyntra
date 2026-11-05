@@ -36,6 +36,18 @@ rules:
     requireFresh: true
     approvedExpiry: 2h
 
+# Outbound traffic (webhooks, http sources, the AI endpoint, Keep, notifications)
+# may reach only private networks, *.internal names and this host. Anything
+# else is refused before a connection is made, and redirects to another host
+# are refused too. Remove the block to restrict nothing.
+egress:
+  default: deny
+  destinations:
+    private: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, "*.internal"]
+    loopback: [127.0.0.0/8, localhost]
+  rules:
+    - {name: private-networks-only, allow: [private, loopback]}
+
 revalidation:
   maxDrift: 0.3
 

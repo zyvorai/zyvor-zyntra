@@ -39,6 +39,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/auth"
 	"github.com/zyvorai/zyntra/internal/decisions"
 	"github.com/zyvorai/zyntra/internal/draft"
+	"github.com/zyvorai/zyntra/internal/egress"
 	"github.com/zyvorai/zyntra/internal/executor"
 	"github.com/zyvorai/zyntra/internal/gaps"
 	"github.com/zyvorai/zyntra/internal/graph"
@@ -434,6 +435,11 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 	var refresh api.RefreshFunc
 	if c.live() || adapters.Generic(m) {
 		cfg := c.adapterConfig()
+		guard := pol.EgressGuard()
+		cfg.HTTP = guard.Client(cfg.HTTP, egress.Source)
+		for _, ep := range cfg.Endpoints {
+			ep.HTTP = guard.Client(ep.HTTP, egress.Source)
+		}
 		cfg.Inputs, cfg.Holds = in, adapters.NewHoldTracker()
 		refresh = func(ctx context.Context, m *graph.Model) (adapters.Report, error) {
 			return adapters.Refresh(ctx, m, cfg)
@@ -449,7 +455,7 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		if err != nil {
 			return nil, nil, err
 		}
-		nt, err := notify.New(ctx, notify.Config{URL: u, Token: env("ZYNTRA_NOTIFY_TOKEN", ""), On: on, ConsoleURL: env("ZYNTRA_CONSOLE_URL", "")})
+		nt, err := notify.New(ctx, notify.Config{URL: u, Token: env("ZYNTRA_NOTIFY_TOKEN", ""), On: on, ConsoleURL: env("ZYNTRA_CONSOLE_URL", ""), Guard: pol.EgressGuard()})
 		if err != nil {
 			return nil, nil, err
 		}
@@ -461,8 +467,10 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 	}
 	engine := &ai.Engine{}
 	if u := env("ZYNTRA_AI_BASE_URL", ""); u != "" {
-		engine.LLM = ai.NewProvider(u, env("ZYNTRA_AI_API_KEY", ""), env("ZYNTRA_AI_MODEL", ""),
+		prov := ai.NewProvider(u, env("ZYNTRA_AI_API_KEY", ""), env("ZYNTRA_AI_MODEL", ""),
 			env("ZYNTRA_AI_LABEL", "Fabric AI gateway"), envBool("ZYNTRA_AI_INSECURE"))
+		prov.HTTP = pol.EgressGuard().Client(prov.HTTP, egress.AI)
+		engine.LLM = prov
 	}
 	execToken := env("ZYNTRA_EXEC_TOKEN", "")
 	rollouts, err := rollout.Open(filepath.Join(stateDir, "rollouts.json"))
@@ -505,7 +513,7 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		History: history,
 		Store:   store,
 		Inputs:  in,
-		Executor: &executor.Executor{Mode: mode, Run: kubeRunner(c.kubeconfig),
+		Executor: &executor.Executor{Mode: mode, Run: kubeRunner(c.kubeconfig), HTTP: pol.EgressGuard().Client(nil, egress.Webhook),
 			OutDir: env("ZYNTRA_OUTPUT_DIR", filepath.Join(stateDir, "out"))},
 		StateDir: stateDir, Version: version, Host: env("ZYNTRA_HOST", hostname()),
 		PackDir:            packDirOf(c.file),
@@ -513,7 +521,9 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		KeepDoubleApproval: envBool("ZYNTRA_KEEP_DOUBLE_APPROVAL"),
 	}
 	if u := env("ZYNTRA_KEEP_URL", ""); u != "" {
-		opts.Keep = keep.NewBridge(keep.New(u, env("ZYNTRA_KEEP_TOKEN", "")))
+		kc := keep.New(u, env("ZYNTRA_KEEP_TOKEN", ""))
+		kc.HTTP = pol.EgressGuard().Client(kc.HTTP, egress.Keep)
+		opts.Keep = keep.NewBridge(kc)
 	}
 	if opts.ApprovalMode != api.ModeLocal && opts.ApprovalMode != api.ModeKeep {
 		return nil, nil, fmt.Errorf("ZYNTRA_APPROVAL_MODE must be local or keep")
