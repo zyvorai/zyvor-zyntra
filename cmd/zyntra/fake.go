@@ -14,6 +14,7 @@ import (
 
 	"github.com/zyvorai/zyntra/internal/fakeaviation"
 	"github.com/zyvorai/zyntra/internal/fakedefence"
+	"github.com/zyvorai/zyntra/internal/fakeindustrial"
 )
 
 // fakeSources serves Netra-, Gravia-, Fabric- and Keep-shaped endpoints on
@@ -24,7 +25,9 @@ import (
 //
 // It also serves invented maintenance, supply and GRC exports under /defence
 // for examples/defence (bearer token fakedefence.Token), and invented flight
-// and maintenance exports under /aviation for examples/aviation (fakeaviation.Token).
+// and maintenance exports under /aviation for examples/aviation (fakeaviation.Token),
+// and invented plant and safety exports under /industrial for examples/industrial
+// (fakeindustrial.Token).
 func fakeSources(ctx context.Context, addr string) error {
 	start := time.Now()
 	elapsed := func() float64 { return time.Since(start).Seconds() }
@@ -79,6 +82,7 @@ func fakeSources(ctx context.Context, addr string) error {
 	// Invented maintenance, supply and GRC exports for examples/defence.
 	mux.Handle("/defence/", http.StripPrefix("/defence", fakedefence.Handler()))
 	mux.Handle("/aviation/", http.StripPrefix("/aviation", fakeaviation.Handler()))
+	mux.Handle("/industrial/", http.StripPrefix("/industrial", fakeindustrial.Handler()))
 
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	go func() {
