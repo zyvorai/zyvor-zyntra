@@ -29,7 +29,7 @@ defaults these rows assume.
 | Limit access to sensitive object properties | partial | The ontology `sensitive` flag is admin-only. There are no clearance levels or markings yet |
 | Session lock, session termination | partial | Signed cookie with a 12 hour lifetime (7 days with remember-me) in `internal/auth/auth.go`. There is no idle timeout |
 | Control remote access, encrypt remote sessions | delegated | The console listener is plain HTTP; terminate TLS at your ingress (`SECURITY.md`) |
-| Control the flow of CUI | gap | No marking, clearance or egress policy in the code. See "Out of scope today" below |
+| Control the flow of CUI | partial | Optional `markings:` and `egress:` policy blocks (see DEFENCE.md) hide marked data from lower clearances and limit outbound destinations. Enforced inside one instance only; see "Out of scope today" below |
 
 ## 3.2 Awareness and training (AT)
 
@@ -113,7 +113,7 @@ defaults these rows assume.
 | Control | Status | Evidence and notes |
 |---|---|---|
 | Encrypt in transit | partial | TLS 1.2 minimum and a private CA for the Keep listener (`internal/tlsutil/tlsutil.go`); outbound clients verify certificates unless you set `ZYNTRA_ENDPOINT_INSECURE`. The main console listener is HTTP, so terminate TLS at the ingress |
-| Boundary protection, deny by default network | partial | Optional `networkPolicy` in `deploy/helm/zyntra/values.yaml`. No outbound allowlist in the code, and webhooks and AI endpoints follow whatever URL is configured |
+| Boundary protection, deny by default network | partial | Optional `networkPolicy` in `deploy/helm/zyntra/values.yaml`. Optional `egress:` policy restricts webhook, source, AI, Keep and notify destinations (`internal/egress`), checked at dial time; with no `egress:` block, configured URLs are followed as before |
 | Protect secrets | provided | Only `${ZYNTRA_*}` variables expand, Zyntra's own credentials are reserved (`internal/envx/envx.go`); credentials are not sent to a different host on redirect or paging (`internal/connector/rest.go`, `internal/notify/notify.go`) |
 | Cryptographic key management | partial | Signing key and session secret are generated and kept in the state dir; there is no rotation tooling or HSM support |
 | Network disconnect, air-gap | provided | No plan, approval or execution needs a network or a model (`docs/DEFENCE.md`) |
@@ -128,8 +128,9 @@ defaults these rows assume.
 
 ## Out of scope today
 
-Zyntra has no CUI marking, no per-user clearance levels and no outbound
-destination policy, and it enforces nothing inside one instance beyond the
-rows above. These are tracked as follow-up work. Until they exist, keep CUI out
-of pack exports (the defence packs read ids, statuses and counts only) and run
-Zyntra inside the boundary that already protects your CUI.
+Markings, clearance and the egress policy are off unless the policy file turns
+them on, and they are enforced inside one instance only. Zyntra is not a
+multi-level-secure system and carries no accreditation. Cross-instance
+enforcement and certification remain out of scope. Keep CUI out of pack exports
+unless markings are configured, and run Zyntra inside the boundary that already
+protects your CUI.

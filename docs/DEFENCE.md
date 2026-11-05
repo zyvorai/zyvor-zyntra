@@ -130,9 +130,11 @@ allowed.
 
 ## What Zyntra does not do yet
 
-CUI marking and classification levels, data-residency rules that depend on what the data is (egress controls above only look at the destination), and any
-FedRAMP or CMMC certification. The packs read ids, statuses and counts only;
-keep CUI out of the exports. Those controls would be core features, not packs.
+Data-residency rules that depend on what the data is (egress controls only
+look at the destination), enforcement across separate instances, and any
+FedRAMP or CMMC certification. Markings and clearance are enforced inside one
+Zyntra instance; this is not a multi-level-secure system. The packs read ids,
+statuses and counts only; keep CUI out of the exports.
 
 For how Zyntra's existing controls line up with the NIST SP 800-171 families,
 including the gaps, see [CONTROL_MAPPING.md](CONTROL_MAPPING.md).
