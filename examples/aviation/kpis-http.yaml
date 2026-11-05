@@ -1,0 +1,177 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Template: aviation KPIs read live from paged JSON exports (flight operations
+# and maintenance) instead of CSV files. It is a starting point, not a connector
+# for any particular product: change the URLs, the list paths (`items`), the
+# paging link (`next`) and the field names to match your systems' exports. The
+# KPI ids match packs/aviation-ops and packs/aviation-mro where they overlap.
+#
+# Bind these on the Zyntra host (never put values in this file):
+#
+#   ZYNTRA_OPS_URL / ZYNTRA_OPS_TOKEN   flight-operations export base URL and bearer token
+#   ZYNTRA_MRO_URL / ZYNTRA_MRO_TOKEN   maintenance export
+#
+# Each source follows `next` links only on the host it started on, so the token
+# is never sent anywhere else, and retries only HTTP 429 and 5xx answers.
+# Try it without any real system:
+#
+#   zyntra fake-sources -addr 127.0.0.1:19700 &
+#   export ZYNTRA_OPS_URL=http://127.0.0.1:19700/aviation/ops \
+#          ZYNTRA_MRO_URL=http://127.0.0.1:19700/aviation/mro \
+#          ZYNTRA_OPS_TOKEN=fake-aviation-token ZYNTRA_MRO_TOKEN=fake-aviation-token
+#   zyntra serve -f examples/aviation/kpis-http.yaml
+name: aviation-live-template
+
+kpis:
+  - id: on_time_rate
+    name: On-time rate
+    owner: operations
+    value: 0
+    target: 0.85
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_OPS_URL}/flights
+      headers: {Authorization: "Bearer ${ZYNTRA_OPS_TOKEN}"}
+      next: links.next              # the JSON path to the next page's URL
+      items: data.flights           # the list on each page
+      retries: 2
+      field: "#(on_time=yes)"
+      denominator: "#"
+
+  - id: long_delays
+    name: Departures delayed over 60 minutes
+    unit: flights
+    owner: operations
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_OPS_URL}/flights
+      headers: {Authorization: "Bearer ${ZYNTRA_OPS_TOKEN}"}
+      next: links.next
+      items: data.flights
+      retries: 2
+      field: "#"
+      where: {dep_delay_min: ">60"}   # comparison operators; see "Source fields" in REFERENCE.md
+
+  - id: turnaround_p90_min
+    name: Turnaround, 90th percentile
+    unit: min
+    owner: operations
+    value: 0
+    target: 60
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_OPS_URL}/flights
+      headers: {Authorization: "Bearer ${ZYNTRA_OPS_TOKEN}"}
+      next: links.next
+      items: data.flights
+      retries: 2
+      field: "*.turnaround_min"
+      agg: p90
+
+  - id: departures_last_24h
+    name: Departures in the last 24 hours
+    unit: flights
+    owner: operations
+    value: 0
+    target: 3
+    direction: higher
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_OPS_URL}/flights
+      headers: {Authorization: "Bearer ${ZYNTRA_OPS_TOKEN}"}
+      next: links.next
+      items: data.flights
+      retries: 2
+      field: "#"
+      timeField: departed_at          # every row needs a timestamp, or the read fails
+      within: 24h
+
+  - id: deferred_defects_overdue
+    name: Deferred defects past their due date
+    unit: defects
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MRO_URL}/work-orders
+      headers: {Authorization: "Bearer ${ZYNTRA_MRO_TOKEN}"}
+      next: '@odata\.nextLink'      # a dot inside a key is escaped with a backslash
+      items: value
+      retries: 2
+      field: "#"
+      where: {kind: "=deferred", state: "=open", due_in_days: "<0"}
+
+  - id: work_order_age_p90_days
+    name: Open work order age, 90th percentile
+    unit: d
+    owner: maintenance
+    value: 0
+    target: 14
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MRO_URL}/work-orders
+      headers: {Authorization: "Bearer ${ZYNTRA_MRO_TOKEN}"}
+      next: '@odata\.nextLink'
+      items: value
+      retries: 2
+      field: "*.age_days"
+      where: {state: "=open"}
+      agg: p90
+
+  - id: parts_fill_rate
+    name: Parts fill rate
+    owner: supply
+    value: 0
+    target: 0.9
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_MRO_URL}/parts
+      headers: {Authorization: "Bearer ${ZYNTRA_MRO_TOKEN}"}
+      next: meta.next
+      items: results
+      retries: 2
+      field: "*.filled"
+      denominator: "*.requested"
+
+  - id: aog_critical_stockouts
+    name: AOG-critical parts with none on hand
+    unit: parts
+    owner: supply
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MRO_URL}/parts
+      headers: {Authorization: "Bearer ${ZYNTRA_MRO_TOKEN}"}
+      next: meta.next
+      items: results
+      retries: 2
+      field: "#"
+      where: {aog_critical: "=yes", on_hand: "<=0"}
+
+edges:
+  - {from: long_delays, to: on_time_rate, weight: -0.04, confidence: 0.5, why: each long delay is a missed departure}
+  - {from: parts_fill_rate, to: aog_critical_stockouts, weight: -1.5, confidence: 0.4, why: unfilled requests become stockouts}
+
+actions: []

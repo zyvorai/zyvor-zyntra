@@ -41,9 +41,14 @@ fields" in `REFERENCE.md`):
 
 To point a pack at your own systems, keep the column names listed in each
 `sources.example.yaml` and replace the files in `fixture/` with exports, or
-change the `file` sources to `http` ones (paged and retrying; see
-`examples/defence/` for the shapes). Nothing has been run against a real
-operations-control, crew-management or maintenance system.
+change the `file` sources to `http` ones (paged and retrying). `examples/aviation/`
+is a template that does this for eight of the KPIs, over three paged JSON
+exports, and shows `where` comparisons, `p90` and a `timeField`/`within`
+trailing window on live data. It is tested only against invented exports served
+by `zyntra fake-sources` (under `/aviation`, bearer token
+`fake-aviation-token`) and is not a connector for any named product. Nothing has
+been run against a real operations-control, crew-management or maintenance
+system.
 
 ## Policy
 
@@ -59,5 +64,5 @@ roles. To keep sensitive KPIs from lower clearances, combine it with the
 A-CDM milestone messaging and runway-capacity or ATC-delay measures (the
 airport pack covers turnaround, stands, slot adherence, baggage and security
 queues only), drone and eVTOL fleets and launch ranges are in
-[INDUSTRIAL.md](INDUSTRIAL.md). Real connectors for named operations or
-maintenance systems are not included. Certification of any kind is out of scope.
+[INDUSTRIAL.md](INDUSTRIAL.md). Connectors for named operations or
+maintenance products are not included. Certification of any kind is out of scope.
