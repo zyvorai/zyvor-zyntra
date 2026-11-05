@@ -5,5 +5,5 @@
 # any variable.
 variables: []
 files:
-  - {path: fixture/machines.csv, description: "Machines: machine_id, state (running|down|idle), planned_h, run_h, good_units, total_units, mtbf_h, mttr_h"}
+  - {path: fixture/machines.csv, description: "Machines: machine_id, state (running|down|idle), planned_h, run_h, ideal_units (what the machine would have made in run_h at its ideal rate), good_units, total_units, mtbf_h, mttr_h"}
   - {path: fixture/workorders.csv, description: "Work orders: wo_id, type (preventive|corrective), state (open|done), overdue_days"}

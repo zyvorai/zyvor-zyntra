@@ -58,3 +58,40 @@ actions:
 		t.Error("Restrict changed the source model")
 	}
 }
+
+func TestRestrictHidesDerivedKPIsWithAnyHiddenInput(t *testing.T) {
+	m, err := Parse([]byte(`
+kpis:
+  - {id: both, value: 0, derive: {op: sum, of: [pub, sec]}}
+  - {id: onlypub, value: 0, derive: {op: sum, of: [pub]}}
+  - {id: chain, value: 0, derive: {op: sum, of: [both, pub]}}
+  - {id: pub, value: 1}
+  - {id: sec, value: 2}
+  - {id: after, value: 1}
+edges: [{from: both, to: after, weight: 0.1}]
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := m.Clone()
+	c.Restrict(func(k KPI) bool { return k.ID == "sec" }, nil)
+	for _, id := range []string{"sec", "both", "chain"} {
+		if _, ok := c.KPI(id); ok {
+			t.Errorf("%s reveals the hidden input and must go", id)
+		}
+	}
+	for _, id := range []string{"pub", "onlypub", "after"} {
+		if _, ok := c.KPI(id); !ok {
+			t.Errorf("%s does not depend on the hidden input and must stay", id)
+		}
+	}
+	if len(c.Edges) != 0 {
+		t.Errorf("the edge out of a removed derived KPI must go: %+v", c.Edges)
+	}
+	if err := c.Validate(); err != nil {
+		t.Errorf("the restricted model must still be valid: %v", err)
+	}
+	if _, ok := m.KPI("both"); !ok {
+		t.Error("the original model was changed")
+	}
+}

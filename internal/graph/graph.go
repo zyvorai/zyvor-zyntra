@@ -405,6 +405,9 @@ type KPI struct {
 	Max         *float64    `yaml:"max,omitempty" json:"max,omitempty"`
 	Freshness   *Freshness  `yaml:"freshness,omitempty" json:"freshness,omitempty"`
 	Source      *Source     `yaml:"source,omitempty" json:"source,omitempty"`
+	// Derive computes this KPI from other KPIs (see Derive). A derived KPI has
+	// no source, and no action effect or edge may move it.
+	Derive *Derive `yaml:"derive,omitempty" json:"derive,omitempty"`
 	// Marking is the data marking of this KPI (see the policy's markings).
 	// Empty means the default marking. Viewers without a matching clearance
 	// do not see the KPI at all.
@@ -794,6 +797,26 @@ func (m *Model) Validate() error {
 		}
 		m.index[k.ID] = i
 	}
+	for i := range m.KPIs {
+		k := &m.KPIs[i]
+		if k.Derive == nil {
+			continue
+		}
+		if k.Source != nil && k.Source.Kind != "" {
+			return fmt.Errorf("kpi %q: a derived kpi cannot also have a source", k.ID)
+		}
+		if err := k.Derive.check(); err != nil {
+			return fmt.Errorf("kpi %q: %w", k.ID, err)
+		}
+		for _, in := range k.Derive.Of {
+			if in == k.ID {
+				return fmt.Errorf("kpi %q: derive refers to itself", k.ID)
+			}
+			if _, ok := m.index[in]; !ok {
+				return fmt.Errorf("kpi %q: derive refers to unknown kpi %q", k.ID, in)
+			}
+		}
+	}
 	var loc *time.Location
 	if m.Timezone != "" {
 		var err error
@@ -862,6 +885,9 @@ func (m *Model) Validate() error {
 		if e.From == e.To {
 			return fmt.Errorf("edge %s->%s: self loop", e.From, e.To)
 		}
+		if m.KPIs[m.index[e.To]].Derived() {
+			return fmt.Errorf("edge %s->%s: %s is derived from other kpis, so no edge may move it", e.From, e.To, e.To)
+		}
 	}
 	seen := map[string]bool{}
 	for ai, a := range m.Actions {
@@ -886,6 +912,9 @@ func (m *Model) Validate() error {
 		for _, ef := range a.Effects {
 			if _, ok := m.index[ef.KPI]; !ok {
 				return fmt.Errorf("action %q: unknown kpi %q", a.ID, ef.KPI)
+			}
+			if m.KPIs[m.index[ef.KPI]].Derived() {
+				return fmt.Errorf("action %q: %s is derived from other kpis, so put the effect on one of its inputs", a.ID, ef.KPI)
 			}
 			switch ef.Mode {
 			case "", EffectRelative, EffectAbsolute:
@@ -1112,6 +1141,19 @@ func (m *Model) TopoOrder() ([]string, error) {
 		indeg[e.To]++
 		out[e.From] = append(out[e.From], e.To)
 	}
+	// A derived KPI follows its inputs, as if an edge ran from each of them.
+	for _, k := range m.KPIs {
+		if k.Derive == nil {
+			continue
+		}
+		for _, in := range k.Derive.Of {
+			if _, ok := pos[in]; !ok {
+				continue
+			}
+			indeg[k.ID]++
+			out[in] = append(out[in], k.ID)
+		}
+	}
 	var ready []string
 	for _, k := range m.KPIs {
 		if indeg[k.ID] == 0 {
@@ -1132,7 +1174,7 @@ func (m *Model) TopoOrder() ([]string, error) {
 		}
 	}
 	if len(order) != len(m.KPIs) {
-		return nil, fmt.Errorf("edges contain a cycle; the KPI graph must be acyclic")
+		return nil, fmt.Errorf("edges and derive formulas contain a cycle; the KPI graph must be acyclic")
 	}
 	return order, nil
 }
@@ -1189,6 +1231,7 @@ func (m *Model) Clone() *Model {
 			f := *k.Freshness
 			k.Freshness = &f
 		}
+		k.Derive = cloneDerive(k.Derive)
 		if k.Source != nil {
 			s := *k.Source
 			s.Labels, s.Headers, s.Where = cloneMap(s.Labels), cloneMap(s.Headers), cloneMap(s.Where)

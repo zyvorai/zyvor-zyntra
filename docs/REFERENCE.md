@@ -142,7 +142,35 @@ actions:
 
 Webhook bodies resolve `kpi:<id>` to the live value and `gap:<id>` to the gap (value, target, severity). File content is a Go template with `.Action`, `.KPIs`, `.Gaps`, `.Date`, `.Time` and `.Stamp`, plus `pct` and `num`; a missing key is an error, not an empty string.
 
-Edge `confidence` below 1 widens the band; `provenance: learned` marks the relationship as assumed in the trace. A KPI's freshness defaults to three refresh intervals; values older than that are `stale`, never-fetched ones `missing`, and KPIs without a source `static`.
+Edge `confidence` below 1 widens the band; `provenance: learned` marks the relationship as assumed in the trace. A KPI's freshness defaults to three refresh intervals; values older than that are `stale`, never-fetched ones `missing`, and KPIs without a source `static`. A derived KPI takes the worst state of its inputs.
+
+### Derived KPIs
+
+A KPI can be computed from other KPIs instead of read from a source:
+
+```yaml
+kpis:
+  - id: oee
+    unitClass: ratio
+    min: 0
+    max: 1
+    target: 0.65
+    direction: higher
+    derive: {op: product, of: [machine_availability, performance_rate, first_pass_yield]}
+  - id: loss_cost
+    derive: {op: weighted_sum, of: [scrap_units, downtime_h], weights: [12, 340]}
+  - id: fill_per_request
+    derive: {op: ratio, of: [filled, requested]}      # numerator, denominator
+```
+
+Ops are `product`, `sum`, `weighted_sum` (one weight per input), `ratio` (exactly two inputs), `min`, `max` and `avg`, with at most six inputs. The rules:
+
+- A derived KPI has no `source`. No action effect and no edge may target it; put the effect on one of its inputs. Edges out of it are allowed.
+- Inputs are computed first, in dependency order, and a cycle through a formula is a validation error.
+- On refresh the value is recomputed from the inputs. If any input failed, is warming up or is held outside its calendar window, the derived value keeps its last value and reports why. A ratio with a zero denominator, or a result that is not a finite number, is an error rather than a made-up value.
+- Freshness is the worst of its inputs (`missing`, then `stale`, `held`, `fresh`, and `static` only when every input is). A stale input therefore keeps the derived KPI out of planning, just as it would the input.
+- In a simulated plan a derived KPI follows its inputs: its value comes from the inputs' nominal outcome and its range from the corners of their ranges, so an action that raises availability moves OEE. If the range cannot be bounded (a ratio whose denominator might reach zero) the value is kept and flagged as bounded. When no input moves, the value does not change.
+- A viewer who cannot see an input cannot see the derived KPI either, and with `markings:` configured a derived KPI must be marked at least as high as every input.
 
 ### Live values
 

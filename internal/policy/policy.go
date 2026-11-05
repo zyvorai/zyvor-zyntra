@@ -420,6 +420,21 @@ func (p *Policy) CheckModel(m *graph.Model) error {
 			return fmt.Errorf("kpi %s: unknown marking %q", k.ID, k.Marking)
 		}
 	}
+	if p.Markings != nil {
+		// A derived KPI reveals its inputs, so it must be marked at least as
+		// high as every one of them.
+		for _, k := range m.KPIs {
+			if k.Derive == nil {
+				continue
+			}
+			for _, id := range k.Derive.Of {
+				in, ok := m.KPI(id)
+				if ok && !p.Markings.Dominates(k.Marking, in.Marking) {
+					return fmt.Errorf("kpi %s: derived from %s, which is marked %q, so it needs that marking or higher", k.ID, id, in.Marking)
+				}
+			}
+		}
+	}
 	for _, a := range m.Actions {
 		if a.Marking == "" {
 			continue

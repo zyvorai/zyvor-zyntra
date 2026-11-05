@@ -162,7 +162,62 @@ func (t *Tracker) States(m *graph.Model) []State {
 		}
 		out = append(out, s)
 	}
-	return out
+	return inherit(m, out)
+}
+
+// rank orders statuses from least to most worrying, for a derived KPI that
+// takes the worst of its inputs.
+var rank = map[string]int{Static: 0, Fresh: 1, Held: 2, Stale: 3, Missing: 4}
+
+// inherit gives each derived KPI the freshness of its inputs: the worst
+// status among them, the oldest last success, and the first input error. A
+// derived KPI is only as current as the stalest number inside it, so a stale
+// input keeps the result out of planning just as it would the input itself.
+func inherit(m *graph.Model, states []State) []State {
+	any := false
+	for _, k := range m.KPIs {
+		any = any || k.Derived()
+	}
+	if !any {
+		return states
+	}
+	order, err := m.TopoOrder()
+	if err != nil {
+		return states
+	}
+	at := make(map[string]int, len(states))
+	for i, s := range states {
+		at[s.KPI] = i
+	}
+	byID := make(map[string]graph.KPI, len(m.KPIs))
+	for _, k := range m.KPIs {
+		byID[k.ID] = k
+	}
+	for _, id := range order {
+		k := byID[id]
+		if !k.Derived() {
+			continue
+		}
+		s := &states[at[id]]
+		s.Status = Static
+		for _, in := range k.Derive.Of {
+			x := states[at[in]]
+			if rank[x.Status] > rank[s.Status] {
+				s.Status = x.Status
+			}
+			if x.LastSuccess != nil && (s.LastSuccess == nil || x.LastSuccess.Before(*s.LastSuccess)) {
+				ls := *x.LastSuccess
+				s.LastSuccess = &ls
+			}
+			if x.AgeSeconds > s.AgeSeconds {
+				s.AgeSeconds = x.AgeSeconds
+			}
+			if s.LastError == "" && x.LastError != "" {
+				s.LastError = "input " + in + ": " + x.LastError
+			}
+		}
+	}
+	return states
 }
 
 // Index returns states keyed by KPI id.

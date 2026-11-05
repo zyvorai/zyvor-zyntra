@@ -4,9 +4,9 @@
 # Availability, yield, reliability and maintenance discipline for a plant, in the
 # spirit of ISO 22400 manufacturing KPIs. The fixture/ files are a small invented
 # sample; point the file sources at your MES and CMMS exports (same columns).
-# Targets and weights are starting points, not a standard. OEE needs the product
-# of availability, performance and quality; a pack cannot multiply KPIs yet, so
-# the parts are reported separately.
+# Targets and weights are starting points, not a standard. OEE is derived: the
+# product of availability, performance and quality, recomputed on every refresh
+# and inside every simulated plan.
 name: industrial-plant
 
 kpis:
@@ -22,6 +22,17 @@ kpis:
     max: 1
     source: {kind: file, file: fixture/machines.csv, field: "*.run_h", denominator: "*.planned_h"}
 
+  - id: performance_rate
+    name: Performance rate
+    unitClass: ratio
+    owner: production
+    value: 0
+    target: 0.9
+    direction: higher
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/machines.csv, field: "*.total_units", denominator: "*.ideal_units"}
+
   - id: first_pass_yield
     name: First-pass yield
     unitClass: ratio
@@ -32,6 +43,18 @@ kpis:
     min: 0
     max: 1
     source: {kind: file, file: fixture/machines.csv, field: "*.good_units", denominator: "*.total_units"}
+
+  - id: oee
+    name: Overall equipment effectiveness
+    unitClass: ratio
+    owner: production
+    value: 0
+    target: 0.65
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    derive: {op: product, of: [machine_availability, performance_rate, first_pass_yield]}
 
   - id: machines_down
     name: Machines down
