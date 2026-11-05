@@ -155,7 +155,7 @@ const USE_CASES: [string, string][] = [
   ],
   [
     'Start from a CSV',
-    'Point a retail, manufacturing, logistics, payments or imaging operations pack at an export and get a ranked plan.',
+    'Point a retail, manufacturing, logistics, payments, imaging, defence, aviation or industrial operations pack at an export and get a ranked plan.',
   ],
   [
     'Investigate a KPI change',
