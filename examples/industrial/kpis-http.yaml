@@ -1,0 +1,215 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Template: plant and process-safety KPIs read live from three paged JSON
+# exports (a manufacturing-execution system, a maintenance system and a
+# safety-device register) instead of CSV files. It is a starting point, not a
+# connector for any particular product: change the URLs, the list paths
+# (`items`), the paging link (`next`) and the field names to match your
+# systems' exports. The KPI ids match packs/industrial-plant and
+# packs/process-safety where they overlap. `oee` is a derived KPI over three
+# live inputs, so it follows them on every refresh.
+#
+# Bind these on the Zyntra host (never put values in this file):
+#
+#   ZYNTRA_MES_URL / ZYNTRA_MES_TOKEN        manufacturing-execution export base URL and bearer token
+#   ZYNTRA_CMMS_URL / ZYNTRA_CMMS_TOKEN      maintenance export
+#   ZYNTRA_SAFETY_URL / ZYNTRA_SAFETY_TOKEN  safety-device register
+#
+# Each source follows `next` links only on the host it started on, so the token
+# is never sent anywhere else, and retries only HTTP 429 and 5xx answers.
+# Try it without any real system:
+#
+#   zyntra fake-sources -addr 127.0.0.1:19700 &
+#   export ZYNTRA_MES_URL=http://127.0.0.1:19700/industrial/mes \
+#          ZYNTRA_CMMS_URL=http://127.0.0.1:19700/industrial/cmms \
+#          ZYNTRA_SAFETY_URL=http://127.0.0.1:19700/industrial/safety \
+#          ZYNTRA_MES_TOKEN=fake-industrial-token ZYNTRA_CMMS_TOKEN=fake-industrial-token \
+#          ZYNTRA_SAFETY_TOKEN=fake-industrial-token
+#   zyntra serve -f examples/industrial/kpis-http.yaml
+name: industrial-live-template
+
+kpis:
+  - id: machine_availability
+    name: Machine availability
+    owner: production
+    value: 0
+    target: 0.85
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_MES_URL}/machines
+      headers: {Authorization: "Bearer ${ZYNTRA_MES_TOKEN}"}
+      next: links.next
+      items: data.machines
+      retries: 2
+      field: "*.run_h"
+      denominator: "*.planned_h"
+
+  - id: performance_rate
+    name: Performance rate
+    owner: production
+    value: 0
+    target: 0.9
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_MES_URL}/machines
+      headers: {Authorization: "Bearer ${ZYNTRA_MES_TOKEN}"}
+      next: links.next
+      items: data.machines
+      retries: 2
+      field: "*.total_units"
+      denominator: "*.ideal_units"
+
+  - id: first_pass_yield
+    name: First-pass yield
+    owner: production
+    value: 0
+    target: 0.95
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_MES_URL}/machines
+      headers: {Authorization: "Bearer ${ZYNTRA_MES_TOKEN}"}
+      next: links.next
+      items: data.machines
+      retries: 2
+      field: "*.good_units"
+      denominator: "*.total_units"
+
+  - id: oee
+    name: Overall equipment effectiveness
+    owner: production
+    value: 0
+    target: 0.65
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    derive: {op: product, of: [machine_availability, performance_rate, first_pass_yield]}
+
+  - id: machines_down
+    name: Machines down
+    unit: machines
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MES_URL}/machines
+      headers: {Authorization: "Bearer ${ZYNTRA_MES_TOKEN}"}
+      next: links.next
+      items: data.machines
+      retries: 2
+      field: "#"
+      where: {state: "=down"}
+
+  - id: mttr_avg_h
+    name: Mean time to repair
+    unit: h
+    owner: maintenance
+    value: 0
+    target: 6
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_MES_URL}/machines
+      headers: {Authorization: "Bearer ${ZYNTRA_MES_TOKEN}"}
+      next: links.next
+      items: data.machines
+      retries: 2
+      field: "*.mttr_h"
+      agg: avg
+
+  - id: pm_compliance
+    name: Preventive maintenance completed
+    owner: maintenance
+    value: 0
+    target: 0.9
+    direction: higher
+    min: 0
+    max: 1
+    source:
+      kind: http
+      url: ${ZYNTRA_CMMS_URL}/work-orders
+      headers: {Authorization: "Bearer ${ZYNTRA_CMMS_TOKEN}"}
+      next: '@odata\.nextLink'
+      items: value
+      retries: 2
+      field: "#(state=done)"
+      denominator: "#"
+      where: {type: "=preventive"}
+
+  - id: overdue_pm
+    name: Overdue preventive work orders
+    unit: orders
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_CMMS_URL}/work-orders
+      headers: {Authorization: "Bearer ${ZYNTRA_CMMS_TOKEN}"}
+      next: '@odata\.nextLink'
+      items: value
+      retries: 2
+      field: "#"
+      where: {type: "=preventive", state: "=open", overdue_days: ">0"}
+
+  - id: overdue_proof_tests
+    name: Safety devices past their proof-test date
+    unit: devices
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: high
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_SAFETY_URL}/devices
+      headers: {Authorization: "Bearer ${ZYNTRA_SAFETY_TOKEN}"}
+      next: meta.next
+      items: results
+      retries: 2
+      field: "#"
+      where: {due_in_days: "<0"}
+
+  - id: sis_proof_tests_overdue
+    name: Safety-instrumented devices past their proof-test date
+    unit: devices
+    owner: maintenance
+    value: 0
+    target: 0
+    direction: lower
+    criticality: critical
+    min: 0
+    source:
+      kind: http
+      url: ${ZYNTRA_SAFETY_URL}/devices
+      headers: {Authorization: "Bearer ${ZYNTRA_SAFETY_TOKEN}"}
+      next: meta.next
+      items: results
+      retries: 2
+      field: "#"
+      where: {class: "=sis", due_in_days: "<0"}
+
+edges:
+  - {from: machines_down, to: machine_availability, weight: -0.2, confidence: 0.6, why: a machine that is down contributes no run time}
+  - {from: overdue_pm, to: machines_down, weight: 0.3, confidence: 0.3, why: skipped preventive work raises the chance of a breakdown}
+
+actions: []

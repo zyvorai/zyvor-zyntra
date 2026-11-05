@@ -38,6 +38,17 @@ comparisons such as `due_in_days: "<0"`, `cycles: ">300"` and `state: "!=ready"`
 your export carries timestamps; the fixtures do not use them, because fixed
 timestamps in a sample file would age out.
 
+## Live-connector template
+
+`examples/industrial/` is a template that reads ten of the plant and
+process-safety KPIs from three paged JSON exports (a manufacturing-execution
+system, a maintenance system and a safety-device register) instead of CSV
+files, including `oee` as a derived KPI over three live inputs. It is tested
+only against invented exports served by `zyntra fake-sources` (under
+`/industrial`, bearer token `fake-industrial-token`) and is not a connector for
+any named product. Nothing has been run against a real MES, maintenance or
+safety system.
+
 ## Policy
 
 `examples/policy-industrial.yaml` requires two approvers on every proposal and
