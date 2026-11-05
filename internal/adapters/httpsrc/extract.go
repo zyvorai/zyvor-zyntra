@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -246,8 +247,33 @@ func Aggregate(samples []Sample, name string, labels map[string]string, agg stri
 	return Combine(vals, agg)
 }
 
+// Percentile reports whether agg is a percentile such as "p90" and returns it
+// as a fraction. Only p1 to p99 are accepted.
+func Percentile(agg string) (float64, bool) {
+	if len(agg) < 2 || agg[0] != 'p' {
+		return 0, false
+	}
+	n, err := strconv.Atoi(agg[1:])
+	if err != nil || n < 1 || n > 99 || strconv.Itoa(n) != agg[1:] {
+		return 0, false
+	}
+	return float64(n) / 100, true
+}
+
+// nearestRank is the smallest value with at least q of the values at or below
+// it (the nearest-rank method, which never invents a value between samples).
+func nearestRank(vals []float64, q float64) float64 {
+	s := append([]float64(nil), vals...)
+	sort.Float64s(s)
+	rank := int(math.Ceil(q * float64(len(s))))
+	if rank < 1 {
+		rank = 1
+	}
+	return s[rank-1]
+}
+
 // Combine reduces values with agg: sum (default), max, min, avg, count,
-// first or last.
+// first, last, or a percentile (p50, p90, p95, p99 and so on, nearest rank).
 func Combine(vals []float64, agg string) (float64, error) {
 	if len(vals) == 0 {
 		if agg == "count" || agg == "" || agg == "sum" {
@@ -286,6 +312,9 @@ func Combine(vals []float64, agg string) (float64, error) {
 		return vals[0], nil
 	case "last":
 		return vals[len(vals)-1], nil
+	}
+	if q, ok := Percentile(agg); ok {
+		return nearestRank(vals, q), nil
 	}
 	return 0, fmt.Errorf("unknown agg %q", agg)
 }

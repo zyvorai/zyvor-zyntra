@@ -128,8 +128,9 @@ actions:
 | `file` / `url` | Path relative to the model (or pack) directory / URL; `${ZYNTRA_*}` is expanded |
 | `format` | `csv`, `json`, `yaml` or `prometheus`; guessed from the extension or content type |
 | `field` | Field path into the document, as for `json` sources; `*.amount` collects a column |
-| `where` | Keep only rows whose columns equal these values |
-| `agg` | `sum` (default), `avg`, `min`, `max`, `count`, `first`, `last` |
+| `where` | Keep only rows whose columns match. A plain value is a case-insensitive equality. `">9"`, `">=9"`, `"<9"`, `"<=9"` compare numbers (a cell that is not a number never matches), `"!=closed"` negates, `"in:open\|hold"` matches any listed value, and a leading `=` forces equality for a value that starts with an operator. Several keys are ANDed |
+| `timeField` / `within` | Both or neither, on `file`, `http` and `sheet` sources. Keep only rows whose `timeField` (RFC 3339 text, `YYYY-MM-DD`, or epoch seconds) is no older than `within` (`24h`, `30d`), before `where` and `agg` apply. A row with no usable timestamp is an error, so a bad export cannot silently shrink a count |
+| `agg` | `sum` (default), `avg`, `min`, `max`, `count`, `first`, `last`, or a percentile `p1` to `p99` (nearest rank: the smallest value with at least that share of the values at or below it, so `p90` of ten values is the ninth smallest). An empty set is an error |
 | `denominator` | Second field path; the KPI is `field / denominator` |
 | `headers` | Request headers for `http` and `sheet` |
 | `name` | The `webhook-in` channel (`POST /api/v1/ingest/<name>`) |

@@ -202,8 +202,18 @@ func normalize(v any) any {
 
 // Extract reads a KPI value from a parsed document.
 func Extract(doc any, s graph.Source) (float64, error) {
+	return ExtractAt(doc, s, time.Now())
+}
+
+// ExtractAt is Extract with the clock given, which a trailing window
+// (timeField and within) is measured against.
+func ExtractAt(doc any, s graph.Source, now time.Time) (float64, error) {
 	if samples, ok := doc.(promDoc); ok {
 		return httpsrc.Aggregate(samples, s.Metric, s.Labels, s.Agg)
+	}
+	doc, err := within(doc, s.TimeField, s.Within.D(), now)
+	if err != nil {
+		return 0, err
 	}
 	doc = where(doc, s.Where)
 	v, err := pick(doc, s.Field, s.Agg)
@@ -234,6 +244,10 @@ func pick(doc any, field, agg string) (float64, error) {
 	return httpsrc.Field(doc, field)
 }
 
+// where keeps the rows whose columns match. A plain value is a case-insensitive
+// equality. A value may start with an operator: >, >=, <, <= compare numbers,
+// != is the negation of equality, "in:a|b|c" matches any of the listed values,
+// and "=" forces equality for a value that itself starts with an operator.
 func where(doc any, w map[string]string) any {
 	rows, ok := doc.([]any)
 	if !ok || len(w) == 0 {
@@ -247,7 +261,7 @@ func where(doc any, w map[string]string) any {
 		}
 		match := true
 		for k, want := range w {
-			if !strings.EqualFold(fmt.Sprint(m[k]), want) {
+			if !matches(m[k], want) {
 				match = false
 				break
 			}
@@ -257,6 +271,105 @@ func where(doc any, w map[string]string) any {
 		}
 	}
 	return out
+}
+
+func matches(have any, want string) bool {
+	switch {
+	case strings.HasPrefix(want, "="):
+		return strings.EqualFold(fmt.Sprint(have), want[1:])
+	case strings.HasPrefix(want, "!="):
+		return !strings.EqualFold(fmt.Sprint(have), strings.TrimSpace(want[2:]))
+	case strings.HasPrefix(want, "in:"):
+		for _, x := range strings.Split(want[3:], "|") {
+			if strings.EqualFold(fmt.Sprint(have), strings.TrimSpace(x)) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, op := range []string{">=", "<=", ">", "<"} {
+		if !strings.HasPrefix(want, op) {
+			continue
+		}
+		limit, err := strconv.ParseFloat(strings.TrimSpace(want[len(op):]), 64)
+		if err != nil {
+			return false
+		}
+		v, ok := number(have)
+		if !ok {
+			return false
+		}
+		switch op {
+		case ">=":
+			return v >= limit
+		case "<=":
+			return v <= limit
+		case ">":
+			return v > limit
+		}
+		return v < limit
+	}
+	return strings.EqualFold(fmt.Sprint(have), want)
+}
+
+func number(v any) (float64, bool) {
+	switch t := v.(type) {
+	case float64:
+		return t, true
+	case int:
+		return float64(t), true
+	case int64:
+		return float64(t), true
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(t), 64)
+		return f, err == nil
+	}
+	return 0, false
+}
+
+// within drops rows whose timeField is older than the window. A row with no
+// usable timestamp is an error, so a bad export cannot silently shrink a count.
+// RFC 3339 text and epoch seconds are understood.
+func within(doc any, field string, window time.Duration, now time.Time) (any, error) {
+	if field == "" || window <= 0 {
+		return doc, nil
+	}
+	rows, ok := doc.([]any)
+	if !ok {
+		return nil, fmt.Errorf("timeField needs a list of rows")
+	}
+	from := now.Add(-window)
+	out := make([]any, 0, len(rows))
+	for i, el := range rows {
+		m, ok := el.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("row %d is not an object", i)
+		}
+		t, ok := timestamp(m[field])
+		if !ok {
+			return nil, fmt.Errorf("row %d: %s is not a timestamp", i, field)
+		}
+		if !t.Before(from) {
+			out = append(out, el)
+		}
+	}
+	return out, nil
+}
+
+func timestamp(v any) (time.Time, bool) {
+	switch t := v.(type) {
+	case float64:
+		return time.Unix(int64(t), 0), true
+	case string:
+		for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02"} {
+			if ts, err := time.Parse(layout, strings.TrimSpace(t)); err == nil {
+				return ts, true
+			}
+		}
+	case time.Time:
+		return t, true
+	}
+	return time.Time{}, false
 }
 
 // HoldTracker remembers which KPIs have had a sample inside their calendar
@@ -306,7 +419,7 @@ func (r *run) generic(ctx context.Context, m *graph.Model, k *graph.KPI) (v floa
 		if err != nil {
 			return 0, true, err
 		}
-		v, err := Extract(doc, s)
+		v, err := ExtractAt(doc, s, now)
 		return v, true, err
 	case graph.SourceHTTP, graph.SourceSheet:
 		u, missing := envx.Expand(s.URL)
@@ -326,7 +439,7 @@ func (r *run) generic(ctx context.Context, m *graph.Model, k *graph.KPI) (v floa
 		if d.err != nil {
 			return 0, true, d.err
 		}
-		v, err := Extract(d.v, s)
+		v, err := ExtractAt(d.v, s, now)
 		return v, true, err
 	case graph.SourceWebhookIn:
 		name := "webhook:" + s.Name
@@ -345,7 +458,7 @@ func (r *run) generic(ctx context.Context, m *graph.Model, k *graph.KPI) (v floa
 			return 0, true, fmt.Errorf("webhook %s: %s", s.Name, msg)
 		}
 		r.recordState(name, s.Kind, StateOK, "")
-		v, err := Extract(doc.Body, s)
+		v, err := ExtractAt(doc.Body, s, now)
 		return v, true, err
 	case graph.SourceManual:
 		if r.cfg.Inputs == nil {
