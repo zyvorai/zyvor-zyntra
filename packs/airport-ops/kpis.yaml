@@ -1,0 +1,158 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Turnaround, stands, flow-management adherence, baggage and security queues for
+# an airport operator, in the spirit of A-CDM performance measures. The fixture/
+# files are a small invented sample; point the file sources at exports from your
+# airport operational database and queue sensors (same columns). Targets and
+# weights are starting points, not a standard.
+name: airport-ops
+
+kpis:
+  - id: stand_turnaround_p90_min
+    name: Aircraft turnaround, 90th percentile
+    unit: min
+    unitClass: duration
+    owner: airside
+    value: 0
+    target: 60
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/turns.csv, field: "*.turnaround_min", agg: p90}
+
+  - id: taxi_out_extra_avg_min
+    name: Additional taxi-out time, average
+    unit: min
+    unitClass: duration
+    owner: airside
+    value: 0
+    target: 4
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/turns.csv, field: "*.taxi_out_extra_min", agg: avg}
+
+  - id: stands_blocked
+    name: Stands blocked
+    unit: stands
+    unitClass: count
+    owner: airside
+    value: 0
+    target: 0
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/stands.csv, field: "#(state=blocked)"}
+
+  - id: stand_utilisation
+    name: Stand utilisation
+    unitClass: ratio
+    owner: airside
+    value: 0
+    target: 0.8
+    direction: lower
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/stands.csv, field: "#(state=occupied)", denominator: "#"}
+
+  - id: ctot_adherence
+    name: Flow-management slot adherence
+    unitClass: ratio
+    owner: airside
+    value: 0
+    target: 0.9
+    direction: higher
+    criticality: high
+    min: 0
+    max: 1
+    source: {kind: file, file: fixture/ctot.csv, field: "#(adhered=yes)", denominator: "#"}
+
+  - id: last_bag_p90_min
+    name: Last bag delivered, 90th percentile
+    unit: min
+    unitClass: duration
+    owner: terminal
+    value: 0
+    target: 30
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/baggage.csv, field: "*.last_bag_min", agg: p90}
+
+  - id: late_baggage_flights
+    name: Flights with the last bag over 30 minutes
+    unit: flights
+    unitClass: count
+    owner: terminal
+    value: 0
+    target: 1
+    direction: lower
+    min: 0
+    source: {kind: file, file: fixture/baggage.csv, field: "#", where: {last_bag_min: ">30"}}
+
+  - id: security_queue_p90_min
+    name: Security queue at open lanes, 90th percentile
+    unit: min
+    unitClass: duration
+    owner: security
+    value: 0
+    target: 10
+    direction: lower
+    criticality: high
+    min: 0
+    source: {kind: file, file: fixture/security.csv, field: "*.queue_min", agg: p90, where: {state: "=open"}}
+
+  - id: security_lanes_open
+    name: Security lanes open
+    unit: lanes
+    unitClass: count
+    owner: security
+    value: 0
+    target: 5
+    direction: higher
+    min: 0
+    source: {kind: file, file: fixture/security.csv, field: "#(state=open)"}
+
+edges:
+  - {from: stands_blocked, to: stand_turnaround_p90_min, weight: 4, confidence: 0.3, why: aircraft that cannot use a blocked stand wait or move, which stretches turnarounds}
+  - {from: stand_turnaround_p90_min, to: ctot_adherence, weight: -0.002, confidence: 0.4, why: a late turnaround can miss the slot it was given}
+  - {from: taxi_out_extra_avg_min, to: ctot_adherence, weight: -0.01, confidence: 0.3, why: longer taxi-out eats the margin to a slot}
+  - {from: security_lanes_open, to: security_queue_p90_min, weight: -3, confidence: 0.5, why: more open lanes shorten the queue}
+
+actions:
+  - id: reassign_stand
+    title: Reassign aircraft away from a blocked stand
+    description: Move the next arrivals to free stands while the blocked stand is cleared.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: stands_blocked, change: -0.5, uncertainty: 0.3}
+      - {kpi: stand_turnaround_p90_min, change: -0.1, uncertainty: 0.3}
+
+  - id: add_baggage_team
+    title: Add a baggage-handling team
+    description: Put an extra team on the belts with the slowest last-bag delivery.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: last_bag_p90_min, change: -0.2, uncertainty: 0.3}
+      - {kpi: late_baggage_flights, change: -0.5, uncertainty: 0.4}
+
+  - id: open_security_lane
+    title: Open another security lane
+    description: Staff and open a closed lane at the checkpoint with the longest queue.
+    adapter: noop
+    risk: low
+    effects:
+      - {kpi: security_lanes_open, change: 0.2, uncertainty: 0.2}
+      - {kpi: security_queue_p90_min, change: -0.3, uncertainty: 0.3}
+
+  - id: hold_pushback
+    title: Hold pushbacks to protect a flow-management slot
+    description: Delay pushback sequencing on a congested apron. It changes departure order for other flights, so two approvers are needed.
+    adapter: noop
+    risk: high
+    approvers: 2
+    invariants:
+      - {kpi: ctot_adherence, max_worsen: 0.05, why: a hold must not cost other flights their slots}
+    effects:
+      - {kpi: taxi_out_extra_avg_min, change: -0.2, uncertainty: 0.4}
+      - {kpi: ctot_adherence, change: 0.03, uncertainty: 0.4}

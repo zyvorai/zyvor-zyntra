@@ -1,15 +1,16 @@
 # Aviation packs
 
-Two packs model the operations-control and maintenance work of an airline or
-maintenance organisation. They are advisory: every action is `noop`, so
+Three packs model the operations-control, maintenance and airport work of an
+airline, a maintenance organisation and an airport operator. They are advisory: every action is `noop`, so
 approving records the decision and people make the change. Nothing here
-dispatches or releases an aircraft, sets crew duty limits, or approves
+dispatches or releases an aircraft, controls air traffic, sets crew duty limits, or approves
 airworthiness.
 
 | Pack | Answers | Based on |
 |---|---|---|
 | `aviation-ops` | Where is the day slipping, and what would a standby crew, an extra ground team or a tail swap do to on-time performance? | Departure punctuality, turnaround and crew-duty measures common to airline operations control |
 | `aviation-mro` | Which aircraft are down behind a part or a queue, and what would an expedite, an extra shift or a deferral do to availability? | Fleet availability, work-order backlog, deferred-defect and parts-supply measures common to maintenance organisations |
+| `airport-ops` | Where is the airside or terminal flow backing up, and what would a stand reassignment, an extra baggage team or another security lane do to it? | Turnaround, additional taxi-out time and slot-adherence measures of the kind used in airport collaborative decision making (A-CDM) |
 
 All fixture data is invented. Targets and weights are starting points, not a
 regulatory or industry standard. This work was researched mostly from vendor
@@ -20,7 +21,7 @@ EASA or FAA requirement, and none of it is an airworthiness approval.
 ## Run them
 
 ```bash
-make run-aviation     # both packs with examples/policy-aviation.yaml
+make run-aviation     # all three packs with examples/policy-aviation.yaml
 ./bin/zyntra plan -f packs/aviation-ops
 ```
 
@@ -55,7 +56,8 @@ roles. To keep sensitive KPIs from lower clearances, combine it with the
 
 ## What it does not do yet
 
-Airport-side measures (A-CDM turnaround, stands, baggage, security queues),
-drone and eVTOL fleets and launch-range scheduling are planned as separate
+A-CDM milestone messaging and runway-capacity or ATC-delay measures (the
+airport pack covers turnaround, stands, slot adherence, baggage and security
+queues only), drone and eVTOL fleets and launch-range scheduling are planned as separate
 packs. Real connectors for named operations or maintenance systems are not
 included. Certification of any kind is out of scope.
