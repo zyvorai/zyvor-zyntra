@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,13 +37,25 @@ func (d *Duration) UnmarshalYAML(n *yaml.Node) error {
 	return d.parse(s)
 }
 
+// parseDuration is time.ParseDuration plus a whole number of days ("30d").
+func parseDuration(s string) (time.Duration, error) {
+	if n, ok := strings.CutSuffix(s, "d"); ok {
+		days, err := strconv.Atoi(n)
+		if err != nil || days < 0 || days > 3650 {
+			return 0, fmt.Errorf("bad days")
+		}
+		return time.Duration(days) * 24 * time.Hour, nil
+	}
+	return time.ParseDuration(s)
+}
+
 func (d *Duration) parse(s string) error {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		*d = 0
 		return nil
 	}
-	v, err := time.ParseDuration(s)
+	v, err := parseDuration(s)
 	if err != nil {
 		return fmt.Errorf("invalid duration %q", s)
 	}
@@ -236,8 +249,15 @@ type Source struct {
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 	// Name is the webhook-in channel.
 	Name string `yaml:"name,omitempty" json:"name,omitempty"`
-	// Where keeps only rows whose columns equal these values.
+	// Where keeps only rows whose columns match. A plain value is a
+	// case-insensitive equality; ">5", ">=5", "<5", "<=5", "!=closed" and
+	// "in:a|b" are comparisons ("=" before a value forces equality).
 	Where map[string]string `yaml:"where,omitempty" json:"where,omitempty"`
+	// TimeField and Within keep only rows whose TimeField (RFC 3339 text or
+	// epoch seconds) is no older than Within ("24h", "30d"), before Where and
+	// Agg apply. A row without a usable timestamp is an error.
+	TimeField string   `yaml:"timeField,omitempty" json:"time_field,omitempty"`
+	Within    Duration `yaml:"within,omitempty" json:"within,omitempty"`
 	// Denominator is a second field on the same document; the KPI is
 	// Field / Denominator.
 	Denominator string `yaml:"denominator,omitempty" json:"denominator,omitempty"`
@@ -941,6 +961,12 @@ func validSource(k *KPI) error {
 	}
 	if !sourceFormats[s.Format] {
 		return fmt.Errorf("kpi %q: source format must be csv, json, yaml or prometheus", k.ID)
+	}
+	if (s.TimeField == "") != (s.Within == 0) {
+		return fmt.Errorf("kpi %q: timeField and within go together", k.ID)
+	}
+	if s.TimeField != "" && s.Kind != SourceFile && s.Kind != SourceHTTP && s.Kind != SourceSheet {
+		return fmt.Errorf("kpi %q: timeField works on file, http and sheet sources", k.ID)
 	}
 	switch s.Kind {
 	case SourceFile:
