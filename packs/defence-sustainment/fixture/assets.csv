@@ -1,0 +1,11 @@
+asset_id,platform,depot_id,status,predicted_failure,mtbf_h
+a-01,transport,d-1,fmc,no,310
+a-02,transport,d-1,fmc,no,290
+a-03,transport,d-1,nmcs,yes,150
+a-04,rotary,d-2,fmc,no,220
+a-05,rotary,d-2,nmcm,yes,120
+a-06,rotary,d-2,fmc,no,240
+a-07,ground,d-1,fmc,no,400
+a-08,ground,d-1,nmcs,no,380
+a-09,ground,d-2,fmc,yes,350
+a-10,ground,d-2,fmc,no,410

@@ -1,0 +1,8 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+id: defence-compliance
+title: Defence contractor compliance (CMMC / NIST SP 800-171)
+industry: defence
+version: 0.1.0
+owners: [security, compliance, it]
+timezone: UTC

@@ -1,0 +1,6 @@
+sensor_id,site_id,kind,state,latency_ms,track_quality,false_tracks,tracks
+s-1,site-a,radar,up,120,0.92,1,40
+s-2,site-a,optical,up,200,0.88,2,35
+s-3,site-b,radar,down,0,0,0,0
+s-4,site-b,rf,up,150,0.7,6,30
+s-5,site-c,radar,up,110,0.95,0,50

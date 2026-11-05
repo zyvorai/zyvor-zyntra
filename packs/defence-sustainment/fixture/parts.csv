@@ -1,0 +1,7 @@
+part_id,asset_id,depot_id,supplier_id,on_hand,requested,filled
+p-1,a-03,d-1,s-1,0,4,1
+p-2,a-05,d-2,s-2,0,2,1
+p-3,a-08,d-1,s-1,0,3,2
+p-4,a-09,d-2,s-2,2,2,2
+p-5,a-01,d-1,s-1,5,3,3
+p-6,a-04,d-2,s-2,1,2,2

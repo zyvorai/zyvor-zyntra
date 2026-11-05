@@ -1,0 +1,15 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your maintenance and supply
+# systems (same columns). Dry-run never needs any variable. Keep names,
+# locations and anything marked CUI out of these files: only ids, statuses
+# and counts are read.
+variables: []
+files:
+  - {path: fixture/assets.csv, description: "Fleet: asset_id, platform, depot_id, status (fmc|nmcs|nmcm), predicted_failure (yes|no), mtbf_h"}
+  - {path: fixture/parts.csv, description: "Parts: part_id, asset_id, depot_id, supplier_id, on_hand, requested, filled"}
+  - {path: fixture/workorders.csv, description: "Depot work orders: wo_id, asset_id, depot_id, state (open|closed), age_days"}
+  - {path: fixture/depots.csv, description: "Depots: depot_id, name, region"}
+  - {path: fixture/suppliers.csv, description: "Suppliers: supplier_id, name, tier"}
+  - {path: fixture/fuel.csv, description: "Fuel sites: site_id, variance_pct"}

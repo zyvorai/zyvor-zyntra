@@ -1,0 +1,38 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Which sensors sit at which site. Links say what depends on what; only
+# kpis.yaml predicts.
+name: defence-sensors
+
+objects:
+  - name: Site
+    kpis: [link_availability]
+    properties:
+      - {name: name, type: string, required: true}
+  - name: Sensor
+    kpis: [sensor_uptime, track_quality]
+    properties:
+      - {name: name, type: string, required: true}
+      - {name: kind, type: string}
+      - {name: state, type: string}
+
+links:
+  - {name: deployed_at, from: Sensor, to: Site}
+
+mappings:
+  - {source: fixture/sites.csv, type: Site, namespace: ops, key: site_id, props: {name: name}}
+  - source: fixture/sensors.csv
+    type: Sensor
+    namespace: ops
+    key: sensor_id
+    props: {name: sensor_id, kind: kind, state: state}
+    links: [{type: deployed_at, column: site_id, to: Site}]
+
+actions:
+  - id: dispatch_repair_crew
+    inputs: [{name: sensor, object_type: Sensor, required: true}]
+    outcome: [{object_type: Sensor, must_be_safe: true}]
+
+views:
+  - {id: sensors, title: Sensors, type: Sensor, columns: [name, kind, state], actions: [dispatch_repair_crew]}

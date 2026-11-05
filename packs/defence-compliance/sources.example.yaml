@@ -1,0 +1,12 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Replace the fixture files with exports from your GRC tool and SIEM (same
+# columns). Dry-run never needs any variable. Only ids, statuses and counts
+# are read: keep CUI itself, user names and hostnames out of these files.
+variables: []
+files:
+  - {path: fixture/controls.csv, description: "Controls: control_id, family, status (implemented|partial|planned), evidence_age_days, stale (yes when older than 180 days)"}
+  - {path: fixture/poam.csv, description: "POA&M: item_id, control_id, state (open|closed), age_days"}
+  - {path: fixture/vulns.csv, description: "Scanner: vuln_id, severity, state (open|closed), age_days"}
+  - {path: fixture/cui_access.csv, description: "SIEM: event_id, store, anomalous (yes|no)"}

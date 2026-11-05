@@ -1,0 +1,7 @@
+wo_id,asset_id,depot_id,state,age_days
+w-1,a-03,d-1,open,9
+w-2,a-05,d-2,open,14
+w-3,a-08,d-1,open,6
+w-4,a-09,d-2,open,3
+w-5,a-01,d-1,closed,4
+w-6,a-04,d-2,closed,5
