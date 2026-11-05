@@ -23,6 +23,8 @@ Zyntra reads infrastructure metrics, cluster inventory and, through packs, busin
 - **Model boundaries.** `ZYNTRA_AI_BASE_URL` is never set by default and Zyntra never picks a cloud endpoint, so nothing leaves the network unless you configure it. When set, the model receives KPI names, values, gaps, sample column names and sample rows (for pack drafts and payload fills). It cannot pick, rank, approve or run an action: it rewrites text, drafts pack YAML that is validated and never loaded automatically, chooses a fill column from a validated list, and reads README rules whose line and action must exist. Payload values always come from the source rows frozen on the proposal.
 - The server limits request bodies to 1 MiB (4 MiB for pack-draft samples).
 
+For a control-by-control view against NIST SP 800-171, see `docs/CONTROL_MAPPING.md`.
+
 ## Reporting vulnerabilities
 
 Please report suspected vulnerabilities privately to the project maintainers rather than opening a public issue with exploit details.

@@ -81,3 +81,6 @@ with an Ed25519 signature.
 CUI marking, classification levels, ITAR data-residency enforcement and any
 FedRAMP or CMMC certification. The packs read ids, statuses and counts only;
 keep CUI out of the exports. Those controls would be core features, not packs.
+
+For how Zyntra's existing controls line up with the NIST SP 800-171 families,
+including the gaps, see [CONTROL_MAPPING.md](CONTROL_MAPPING.md).
