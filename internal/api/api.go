@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/zyvorai/zyntra/internal/activity"
 	"github.com/zyvorai/zyntra/internal/adapters"
 	"github.com/zyvorai/zyntra/internal/ai"
 	"github.com/zyvorai/zyntra/internal/approvals"
@@ -34,9 +35,12 @@ import (
 	"github.com/zyvorai/zyntra/internal/knowledge"
 	"github.com/zyvorai/zyntra/internal/planner"
 	"github.com/zyvorai/zyntra/internal/policy"
+	"github.com/zyvorai/zyntra/internal/policyguard"
 	"github.com/zyvorai/zyntra/internal/rollout"
+	"github.com/zyvorai/zyntra/internal/schedules"
 	"github.com/zyvorai/zyntra/internal/sim"
 	"github.com/zyvorai/zyntra/internal/watch"
+	"github.com/zyvorai/zyntra/internal/webhooks"
 )
 
 const maxBody = 1 << 20
@@ -109,6 +113,14 @@ type Options struct {
 	Host     string
 	// PackDir is the pack directory, used to load executive.yaml.
 	PackDir string
+	// Schedules holds interval-based recurring plan generators.
+	Schedules *schedules.Store
+	// Webhooks holds HMAC-signed outbound event destinations.
+	Webhooks *webhooks.Store
+	// Activity tracks principal last-seen stamps.
+	Activity *activity.Store
+	// PolicyGuardRules are optional declarative checks applied at propose time.
+	PolicyGuardRules []policyguard.Rule
 }
 
 type Server struct {
@@ -384,6 +396,20 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/v1/watches/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWatchDelete), auth.Admins...))
 	mux.Handle("POST /api/v1/watch-incidents/{id}/acknowledge", propose(s.handleWatchAcknowledge))
 	mux.Handle("GET /api/v1/watch-incidents/{id}/investigation", read(s.handleIncidentInvestigation))
+	mux.Handle("GET /api/v1/schedules", read(s.handleSchedules))
+	mux.Handle("PUT /api/v1/schedules/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleSchedulePut), auth.Admins...))
+	mux.Handle("POST /api/v1/schedules", s.opt.Auth.Require(http.HandlerFunc(s.handleSchedulePut), auth.Admins...))
+	mux.Handle("DELETE /api/v1/schedules/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleScheduleDelete), auth.Admins...))
+	mux.Handle("GET /api/v1/webhooks", read(s.handleWebhooks))
+	mux.Handle("PUT /api/v1/webhooks/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWebhookPut), auth.Admins...))
+	mux.Handle("POST /api/v1/webhooks", s.opt.Auth.Require(http.HandlerFunc(s.handleWebhookPut), auth.Admins...))
+	mux.Handle("DELETE /api/v1/webhooks/{id}", s.opt.Auth.Require(http.HandlerFunc(s.handleWebhookDelete), auth.Admins...))
+	mux.Handle("POST /api/v1/webhooks/{id}/test", s.opt.Auth.Require(http.HandlerFunc(s.handleWebhookTest), auth.Admins...))
+	mux.Handle("POST /api/v1/bundles/export", s.opt.Auth.Require(http.HandlerFunc(s.handleBundleExport), auth.Admins...))
+	mux.Handle("POST /api/v1/bundles/import", s.opt.Auth.Require(http.HandlerFunc(s.handleBundleImport), auth.Admins...))
+	mux.Handle("GET /api/v1/templates", read(s.handleTemplates))
+	mux.Handle("POST /api/v1/templates/{id}/propose", propose(s.handleTemplatePropose))
+	mux.Handle("GET /api/v1/activity", s.opt.Auth.Require(http.HandlerFunc(s.handleActivity), auth.Admins...))
 	mux.Handle("GET /api/v1/analytics/catalog", read(s.handleAnalyticsCatalog))
 	mux.Handle("POST /api/v1/analytics/query", read(s.handleAnalyticsQuery))
 	mux.Handle("POST /api/v1/analytics/investigate", read(s.handleAnalyticsInvestigation))
@@ -506,6 +532,7 @@ func spa(static fs.FS) http.Handler {
 }
 
 func (s *Server) handleMeta(w http.ResponseWriter, r *http.Request) {
+	s.touchActivity(r)
 	vm, _ := s.snapshotFor(r)
 	src := s.sourcesFor(vm)
 	healthy := 0

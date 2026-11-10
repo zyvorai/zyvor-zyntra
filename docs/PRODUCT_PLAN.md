@@ -180,6 +180,7 @@ Each pack is a file set, not a fork. The first wave is the one a buyer can feed 
 - [x] Predicted versus actual per KPI on the outcome record.
 - [x] Owner filter; currency and duration units; one weekly-window calendar.
 - [x] Console renders webhook bodies and files the way it renders a CRD.
+- [x] Schedules, HMAC outbound webhooks, bundles, templates and activity (console Automations); schedules open pending proposals only.
 - [x] Tests: the shop pack against its fixture; the plan closes stockout and refuses the 30% markdown because it breaks the margin invariant.
 
 Exit: `zyntra plan -f packs/shop` ranks a plan from the CSVs in `packs/shop/fixture/` and `zyntra simulate -f packs/shop -action reorder_fast_movers` prints a dry-run PO, with no Kubernetes in the loop.

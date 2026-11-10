@@ -23,6 +23,9 @@ import Objects from './pages/Objects';
 import Workflows from './pages/Workflows';
 import Scenarios from './pages/Scenarios';
 import ServiceLevels from './pages/ServiceLevels';
+import Schedules from './pages/Schedules';
+import Webhooks from './pages/Webhooks';
+import Bundles from './pages/Bundles';
 import ErrorBoundary from './components/ErrorBoundary';
 import { WhoContext } from './session';
 
@@ -115,6 +118,9 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
           {page === 'servicelevels' && <ServiceLevels />}
           {page === 'decision' && <Decision />}
           {page === 'executive' && <Executive />}
+          {page === 'schedules' && <Schedules />}
+          {page === 'webhooks' && <Webhooks />}
+          {page === 'bundles' && <Bundles />}
         </ErrorBoundary>
       </main>
       <footer className="app-footer">

@@ -3,7 +3,7 @@
 VERSION ?= $(shell sed -n 's/^var version = "\(.*\)"/\1/p' cmd/zyntra/main.go)
 CONTAINER ?= $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
 
-.PHONY: build build-go web test test-web test-incluster eval vet fmt check run run-lab run-shop test-e2e deploy docker compose-up helm-lint k8s-manifest deploy-k8s
+.PHONY: build build-go web test test-web test-incluster eval vet fmt check run run-lab run-shop test-e2e deploy docker compose-up helm-lint k8s-manifest deploy-k8s mac-app mac-dmg
 
 build: web build-go
 
@@ -96,3 +96,12 @@ k8s-manifest:
 deploy-k8s:
 	@test -n "$(HOST)" || (echo "usage: make deploy-k8s HOST=1.2.3.4 [USER=sus] [PACK=shop]"; exit 2)
 	./scripts/deploy-k8s.sh $(HOST) $(or $(USER),sus) --pack $(or $(PACK),shop)
+
+# Optional macOS app (SwiftUI shell + embedded zyntra). Not part of default `make build`.
+# Requires macOS with Xcode / Swift. See docs/MAC_APP.md.
+mac-app:
+	./macos/scripts/build-app.sh
+
+# Signed DMG (+ notarize when Developer ID / notary credentials are set).
+mac-dmg:
+	./macos/scripts/build-dmg.sh

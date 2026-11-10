@@ -8,3 +8,5 @@ __pycache__/
 website/node_modules/
 website/build/
 website/.docusaurus/
+macos/.build/
+macos/build/

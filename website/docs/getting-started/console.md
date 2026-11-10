@@ -6,7 +6,7 @@ sidebar_position: 2
 
 ![Zyntra sign-in](/img/login.png)
 
-`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
+`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Automations** (Schedules, Webhooks, Bundles); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
 
 Using the console:
 
@@ -27,6 +27,7 @@ Using the console:
 - **Service levels** (tenant accounts) shows the tenant's own KPIs against their targets.
 - **Decision timeline** compares predicted and actual per KPI after an apply and marks each a hit or a miss.
 - **Model** shows the pack, each action's kind, window and invariants, plus proposed edges (not in the model), the pack rules check and the pack-draft form.
+- **Schedules** open pending proposals on an interval (top plan or a fixed action); they never execute. **Webhooks** deliver HMAC-signed approval events. **Bundles** export/import schedules and webhook destinations (secrets omitted).
 - **Overview** has the digest with owner and close-of-window selectors; **Approvals** and the decision page show similar past decisions, the source rows behind each payload, and why a run landed or missed.
 
 Sign in with **SSO** (OpenID Connect, authorization code with PKCE), a **local account** from the policy file (bcrypt), the **built-in admin** (`admin` / `Admin@321` until you set `ZYNTRA_ADMIN_PASSWORD`; only present when the policy file defines no users), or the **access key** (`ZYNTRA_API_KEY`, kept as break-glass admin access). Sign-in sets an HMAC session cookie carrying your name and roles (12 h, or 7 days with "remember me"). Scripts can use `Authorization: Bearer $ZYNTRA_API_KEY`.

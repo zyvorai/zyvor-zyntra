@@ -109,6 +109,7 @@ The approval lane shows the baseline against the prediction and the exact change
 | **Investigate a KPI change** | Find sustained shifts and changes that moved before them, with downloadable evidence. Leads, not root causes. |
 | **Answer from your runbooks** | Ask questions over your SOPs and policies and get [cited excerpts](docs/KNOWLEDGE.md), filtered by who is allowed to read them. |
 | **Let scripts propose, not approve** | Service tokens let agents and scripts propose a change. A named person still approves every one. |
+| **Automate the inbox, not the run** | Schedules open pending proposals on a cadence; HMAC webhooks announce transitions; bundles move automation config between environments. |
 
 ## Your dashboards show the problem. Zyntra decides the fix.
 
@@ -174,6 +175,8 @@ helm upgrade --install zyntra oci://ghcr.io/zyvorai/charts/zyntra -n zyntra --cr
 ZYNTRA_API_KEY=$(openssl rand -hex 24) docker compose up --build
 ```
 
+**macOS app (optional):** download the notarized `Zyntra-<version>-macos.dmg` from [Releases](https://github.com/zyvorai/zyvor-zyntra/releases), or build locally with `make mac-app`. Same engine and console; native window for Mac operators. Details: [macOS app](docs/MAC_APP.md).
+
 Binary under systemd, k3s without a registry, cosign verification and air-gapped installs: [Deploy](docs/REFERENCE.md#deploy).
 
 ### Configure
@@ -196,6 +199,7 @@ Full list: [Configuration](docs/REFERENCE.md#configuration).
 | Guide | Covers |
 |---|---|
 | [Reference](docs/REFERENCE.md) | The model file, sources, packs, console, approvals, policy, configuration, [CLI](docs/REFERENCE.md#cli) and [API](docs/REFERENCE.md#api) |
+| [macOS app](docs/MAC_APP.md) | Optional native Mac client, DMG, Developer ID signing and notarization |
 | [Business ontology](docs/ONTOLOGY.md) | Objects, links, connectors, scenarios, tenants, service tokens and rollouts |
 | [KPI watch inbox](docs/WATCHES.md) | Sustained-threshold incidents, acknowledgements and measured recovery |
 | [KPI investigations](docs/INVESTIGATIONS.md) | Sustained shifts, lagged change associations and their limits |

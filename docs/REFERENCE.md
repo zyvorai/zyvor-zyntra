@@ -285,7 +285,7 @@ The full reference (storage and capacity numbers, connectors, calibration, rollo
 
 ![Zyntra sign-in](ux/login.png)
 
-`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
+`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Automations** (Schedules, Webhooks, Bundles); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
 
 Using the console:
 
@@ -306,6 +306,7 @@ Using the console:
 - **Service levels** (tenant accounts) shows the tenant's own KPIs against their targets.
 - **Decision timeline** compares predicted and actual per KPI after an apply and marks each a hit or a miss.
 - **Model** shows the pack, each action's kind, window and invariants, plus proposed edges (not in the model), the pack rules check and the pack-draft form.
+- **Schedules** open pending proposals on an interval (top plan or a fixed action); they never execute. **Webhooks** deliver HMAC-signed approval events. **Bundles** export/import schedules and webhook destinations (secrets omitted).
 - **Overview** has the digest with owner and close-of-window selectors; **Approvals** and the decision page show similar past decisions, the source rows behind each payload, and why a run landed or missed.
 
 Sign in with **SSO** (OpenID Connect, authorization code with PKCE), a **local account** from the policy file (bcrypt), the **built-in admin** (`admin` / `Admin@321` until you set `ZYNTRA_ADMIN_PASSWORD`; only present when the policy file defines no users), or the **access key** (`ZYNTRA_API_KEY`, kept as break-glass admin access). Sign-in sets an HMAC session cookie carrying your name and roles (12 h, or 7 days with "remember me"). Scripts can use `Authorization: Bearer $ZYNTRA_API_KEY`.
@@ -415,7 +416,7 @@ zyntra keep credential                   # zyntra-exec descriptor for ZYVOR_AGEN
 | `ZYNTRA_OIDC_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET` | OpenID Connect sign-in |
 | `ZYNTRA_OIDC_ROLE_MAP` | `group=role[+role],…` mapping from IdP groups to Zyntra roles |
 | `ZYNTRA_OIDC_REDIRECT_URL`, `_GROUPS_CLAIM`, `_SCOPES`, `_DEFAULT_ROLE` | Optional: callback URL (default derived from the request), groups claim (`groups`), scopes, role for unmapped users |
-| `ZYNTRA_LISTEN`, `ZYNTRA_STATE_DIR` | Listen address; directory for decisions, history, the decision signing key and exec TLS |
+| `ZYNTRA_LISTEN`, `ZYNTRA_STATE_DIR` | Listen address; directory for decisions, history, schedules, webhooks, activity, the decision signing key and exec TLS |
 | `ZYNTRA_DEFAULT_PACK` | With `serve -f a,b` (several packs), which pack requests without `X-Zyntra-Pack` use (default: the first) |
 | `ZYNTRA_NETRA_URL` / `_TOKEN` | Netra API (eBPF metrics and health) |
 | `ZYNTRA_GRAVIA_URL` / `_TOKEN` | Gryvia API (GPU cluster, quota, costs) |
@@ -478,6 +479,11 @@ All routes except `/healthz`, `/api/v1/meta`, sign-in and the OIDC redirects nee
 | `GET` | `/api/v1/audit`, `/audit/verify` | viewer | Hash-chained audit trail and its verification |
 | `GET` | `/api/v1/keep/status`, `/approvals`, `/receipts`, `/audit` | viewer | Fabric Keep views (`POST /keep/approvals/{id}` needs approver) |
 | `GET` | `/api/v1/events` | viewer | Server-sent `pulse` events every interval |
+| `GET`/`POST`/`PUT`/`DELETE` | `/api/v1/schedules`, `/schedules/{id}` | viewer / admin | Interval schedules that open pending proposals (never auto-execute) |
+| `GET`/`POST`/`PUT`/`DELETE` | `/api/v1/webhooks`, `/webhooks/{id}`, `/webhooks/{id}/test` | viewer / admin | HMAC-signed outbound destinations for approval transitions |
+| `POST` | `/api/v1/bundles/export`, `/bundles/import` | admin | Versioned export/import of schedules and webhook destinations (secrets never exported) |
+| `GET` / `POST` | `/api/v1/templates`, `/templates/{id}/propose` | viewer / proposer | Built-in decision skeletons; propose creates a normal pending proposal |
+| `GET` | `/api/v1/activity` | admin | Principal last-seen stamps |
 
 ## Deploy
 

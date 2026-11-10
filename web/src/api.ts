@@ -501,10 +501,11 @@ export interface WhoAmI {
   default_password?: boolean;
 }
 
-const capabilities: Record<'propose' | 'approve' | 'execute', Role[]> = {
+const capabilities: Record<'propose' | 'approve' | 'execute' | 'admin', Role[]> = {
   propose: ['proposer', 'approver', 'admin'],
   approve: ['approver', 'admin'],
   execute: ['executor', 'admin'],
+  admin: ['admin'],
 };
 
 export function can(who: WhoAmI | null, what: keyof typeof capabilities): boolean {

@@ -29,6 +29,7 @@ import (
 
 	keeppack "github.com/zyvorai/zyntra/keep"
 
+	"github.com/zyvorai/zyntra/internal/activity"
 	"github.com/zyvorai/zyntra/internal/adapters"
 	"github.com/zyvorai/zyntra/internal/adapters/httpsrc"
 	"github.com/zyvorai/zyntra/internal/adapters/kubernetes"
@@ -51,9 +52,11 @@ import (
 	"github.com/zyvorai/zyntra/internal/planner"
 	"github.com/zyvorai/zyntra/internal/policy"
 	"github.com/zyvorai/zyntra/internal/rollout"
+	"github.com/zyvorai/zyntra/internal/schedules"
 	"github.com/zyvorai/zyntra/internal/sim"
 	"github.com/zyvorai/zyntra/internal/tlsutil"
 	"github.com/zyvorai/zyntra/internal/watch"
+	"github.com/zyvorai/zyntra/internal/webhooks"
 	"github.com/zyvorai/zyntra/web"
 )
 
@@ -506,11 +509,35 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		docs.Close()
 		return nil, nil, fmt.Errorf("watches: %w", err)
 	}
+	schedStore, err := schedules.Open(filepath.Join(stateDir, "schedules.json"))
+	if err != nil {
+		history.Close()
+		docs.Close()
+		watches.Close()
+		return nil, nil, fmt.Errorf("schedules: %w", err)
+	}
+	hookStore, err := webhooks.Open(filepath.Join(stateDir, "webhooks.json"))
+	if err != nil {
+		history.Close()
+		docs.Close()
+		watches.Close()
+		return nil, nil, fmt.Errorf("webhooks: %w", err)
+	}
+	actStore, err := activity.Open(filepath.Join(stateDir, "activity.json"))
+	if err != nil {
+		history.Close()
+		docs.Close()
+		watches.Close()
+		return nil, nil, fmt.Errorf("activity: %w", err)
+	}
 	opts := api.Options{
 		Watches:   watches,
 		Knowledge: docs,
 		Ontology:  ont,
 		Rollouts:  rollouts,
+		Schedules: schedStore,
+		Webhooks:  hookStore,
+		Activity:  actStore,
 		Model:     m, Refresh: refresh, Interval: interval, Static: web.FS(),
 		Auth:    authn,
 		Packs:   packs,
@@ -562,6 +589,7 @@ func buildPack(ctx context.Context, c *common, file, policyFile string, authn *a
 		pr.id, pr.title, pr.industry = m.Pack.ID, m.Pack.Title, m.Pack.Industry
 	}
 	pr.srv = api.New(opts)
+	store.OnEvent(pr.srv.DeliverWebhooks)
 	return pr, authn, nil
 }
 

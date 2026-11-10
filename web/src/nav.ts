@@ -14,7 +14,10 @@ export type Page =
   | 'scenarios'
   | 'servicelevels'
   | 'decision'
-  | 'executive';
+  | 'executive'
+  | 'schedules'
+  | 'webhooks'
+  | 'bundles';
 
 export interface NavChild { page: Page; label: string; blurb: string; tenantOnly?: boolean }
 export interface NavGroup { label: string; page?: Page; children?: NavChild[]; ontology?: boolean }
@@ -35,6 +38,14 @@ export const navGroups: NavGroup[] = [
     children: [
       { page: 'approvals', label: 'Approvals', blurb: 'Quorum approvals, revalidation and outcomes for each proposal.' },
       { page: 'audit', label: 'Audit', blurb: 'Hash-chained decision trail, plus Fabric Keep receipts.' },
+    ],
+  },
+  {
+    label: 'Automations',
+    children: [
+      { page: 'schedules', label: 'Schedules', blurb: 'Recurring plan runs that still need approval.' },
+      { page: 'webhooks', label: 'Webhooks', blurb: 'HMAC-signed outbound event destinations.' },
+      { page: 'bundles', label: 'Bundles', blurb: 'Export and import automation subsets.' },
     ],
   },
   {
@@ -75,6 +86,9 @@ export const pageTitles: Record<Page, string> = {
   servicelevels: 'Service levels',
   decision: 'Decision',
   executive: 'Executive',
+  schedules: 'Schedules',
+  webhooks: 'Webhooks',
+  bundles: 'Bundles',
 };
 
 export function pageFromHash(): Page {

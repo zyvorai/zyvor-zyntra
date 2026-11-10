@@ -22,6 +22,7 @@ import (
 	"github.com/zyvorai/zyntra/internal/ontology"
 	"github.com/zyvorai/zyntra/internal/outcome"
 	"github.com/zyvorai/zyntra/internal/policy"
+	"github.com/zyvorai/zyntra/internal/policyguard"
 	"github.com/zyvorai/zyntra/internal/sim"
 )
 
@@ -200,6 +201,18 @@ func (s *Server) handlePropose(w http.ResponseWriter, r *http.Request) {
 	if len(res.PreconditionFailures) > 0 {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "preconditions not met", "blocked_reasons": res.PreconditionFailures})
 		return
+	}
+	if len(s.opt.PolicyGuardRules) > 0 {
+		before, after := policyguard.Context{}, policyguard.Context{}
+		for _, k := range res.KPIs {
+			before[k.KPI], after[k.KPI] = k.Before, k.After
+		}
+		if bad := policyguard.Check(s.opt.PolicyGuardRules, before, after); bad != nil {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+				"error": "blocked by policy guard", "blocked_reasons": []string{bad.ID + " on " + bad.KPI},
+			})
+			return
+		}
 	}
 	eff := s.opt.Policy.For(acts...)
 	risk, adapter := describe(acts)
@@ -694,6 +707,7 @@ func (s *Server) tick(ctx context.Context, now time.Time) {
 		}
 	}
 	s.observe(now)
+	s.tickSchedules(now)
 }
 
 // observe samples every open outcome observation.
