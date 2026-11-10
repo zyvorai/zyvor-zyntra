@@ -540,8 +540,8 @@ The image is distroless, runs as uid 65532, and keeps state (proposals, audit ch
 ### Kubernetes (Helm or plain manifest)
 
 ```bash
-helm upgrade --install zyntra oci://ghcr.io/zyvorai/charts/zyntra --version 0.4.0 \
-  -n zyntra --create-namespace --set pack=shop            # image ghcr.io/zyvorai/zyntra:0.4.0
+helm upgrade --install zyntra oci://ghcr.io/zyvorai/charts/zyntra --version 0.5.0 \
+  -n zyntra --create-namespace --set pack=shop            # image ghcr.io/zyvorai/zyntra:0.5.0
 # or from a checkout: helm upgrade --install zyntra deploy/helm/zyntra ... --set image.repository=registry.internal/zyntra
 kubectl -n zyntra port-forward svc/zyntra 8080:8080
 kubectl -n zyntra get secret zyntra-auth -o jsonpath='{.data.ZYNTRA_API_KEY}' | base64 -d

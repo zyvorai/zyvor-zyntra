@@ -31,6 +31,8 @@ Using the console:
 - **Schedules** open pending proposals on an interval (top plan or a fixed action); they never execute. **Webhooks** deliver HMAC-signed approval events. **Bundles** export/import schedules and webhook destinations (secrets omitted).
 - **Overview** has the digest with owner and close-of-window selectors; **Approvals** and the decision page show similar past decisions, the source rows behind each payload, and why a run landed or missed.
 
+An optional native [macOS app](./macos.md) wraps the same console and embedded server.
+
 Sign in with **SSO** (OpenID Connect, authorization code with PKCE), a **local account** from the policy file (bcrypt), the **built-in admin** (`admin` / `Admin@321` until you set `ZYNTRA_ADMIN_PASSWORD`; only present when the policy file defines no users), or the **access key** (`ZYNTRA_API_KEY`, kept as break-glass admin access). Sign-in sets an HMAC session cookie carrying your name and roles (12 h, or 7 days with "remember me"). Scripts can use `Authorization: Bearer $ZYNTRA_API_KEY`.
 
 | Role | Can |

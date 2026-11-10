@@ -60,7 +60,7 @@ import (
 	"github.com/zyvorai/zyntra/web"
 )
 
-var version = "0.5.0-dev"
+var version = "0.5.0"
 
 const usage = `zyntra - decision intelligence: KPI gaps, simulated actions, approved changes
 

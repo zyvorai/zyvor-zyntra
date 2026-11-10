@@ -169,7 +169,7 @@ Quality checks use the named pack contract in `data-contracts.json`. They report
 required-field completeness, type mismatches, undeclared fields, duplicate
 composite keys, stale observation times and future timestamps (>1 minute skew).
 Diagnostics name row indexes and fields, not cell values. They identify affected
-KPIs. The standalone `quality` route is a preview. Bind a webhook channel to its contract through `ingest-contracts.json` to enforce quarantine during ingestion; see [Input events](INPUT_EVENTS.md).
+KPIs. The standalone `quality` route is a preview. Bind a webhook channel to its contract through `ingest-contracts.json` to enforce quarantine during ingestion; see [Input events](./input-events.md).
 Enum membership, units and cross-source reconciliation remain future extensions.
 Full model clearance is required for contract previews.
 
