@@ -84,6 +84,8 @@ All routes except `/healthz`, `/api/v1/meta`, sign-in and the OIDC redirects nee
 | `GET` | `/api/v1/audit`, `/audit/verify` | viewer | Hash-chained audit trail and its verification |
 | `GET` | `/api/v1/keep/status`, `/approvals`, `/receipts`, `/audit` | viewer | Fabric Keep views (`POST /keep/approvals/{id}` needs approver) |
 | `GET` | `/api/v1/events` | viewer | Server-sent `pulse` events every interval |
+| `GET` | `/api/v1/inputs/{channel}/events` | admin | Retained webhook event journal (cursor, late, duplicates) |
+| `GET`/`POST` | `/api/v1/planning/snapshot`, `/portfolios`, `/replay`, `/review`, `/timeline`, `/process`, `/benefits`, `/quality` | viewer | Decision-planning workbench (advisory; never executes) |
 | `GET`/`POST`/`PUT`/`DELETE` | `/api/v1/schedules`, `/schedules/{id}` | viewer / admin | Interval schedules that open pending proposals (never auto-execute) |
 | `GET`/`POST`/`PUT`/`DELETE` | `/api/v1/webhooks`, `/webhooks/{id}`, `/webhooks/{id}/test` | viewer / admin | HMAC-signed outbound destinations for approval transitions |
 | `POST` | `/api/v1/bundles/export`, `/bundles/import` | admin | Versioned export/import of schedules and webhook destinations (secrets never exported) |

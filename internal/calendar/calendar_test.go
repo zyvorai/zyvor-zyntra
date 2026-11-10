@@ -82,3 +82,25 @@ func TestCompileNonASCIIDayDoesNotPanic(t *testing.T) {
 		t.Fatal("want error for unknown day")
 	}
 }
+
+func TestHolidaysAndFreezeBoundaries(t *testing.T) {
+	w := Window{Start: "22:00", End: "06:00", TZ: "Asia/Kolkata", Holidays: []string{"2026-11-10"}}
+	if err := w.Compile(nil); err != nil {
+		t.Fatal(err)
+	}
+	at, _ := time.Parse(time.RFC3339, "2026-11-10T01:00:00+05:30")
+	if w.Contains(at) {
+		t.Fatal("overnight window ignored holiday")
+	}
+	w = Window{Start: "00:00", End: "24:00", Freezes: []Freeze{{Start: at, End: at.Add(time.Hour)}}}
+	if err := w.Compile(nil); err != nil {
+		t.Fatal(err)
+	}
+	if w.Contains(at) || !w.Contains(at.Add(time.Hour)) {
+		t.Fatal("freeze must be half-open")
+	}
+	w.Holidays = []string{"2026-99-01"}
+	if w.Compile(nil) == nil {
+		t.Fatal("accepted invalid holiday")
+	}
+}

@@ -32,8 +32,10 @@ type Manual struct {
 }
 
 type state struct {
-	Webhooks map[string]Doc    `json:"webhooks"`
-	Manual   map[string]Manual `json:"manual"`
+	Webhooks     map[string]Doc    `json:"webhooks"`
+	Manual       map[string]Manual `json:"manual"`
+	Events       []Event           `json:"events,omitempty"`
+	NextSequence uint64            `json:"next_sequence,omitempty"`
 }
 
 // Store holds pushed inputs. The zero value is not usable; call Open.
@@ -65,33 +67,66 @@ func Open(path string) (*Store, error) {
 	if st.s.Manual == nil {
 		st.s.Manual = map[string]Manual{}
 	}
+	var last uint64
+	for _, e := range st.s.Events {
+		if e.Sequence <= last || e.Sequence > st.s.NextSequence {
+			return nil, errors.New("invalid input event sequence")
+		}
+		last = e.Sequence
+	}
 	return st, nil
 }
 
-func (s *Store) save() error {
+// copyState is called under the write lock. Existing document bodies are
+// immutable; IngestEvent and Webhook detach all external references.
+func (s *Store) copyState() state {
+	return state{Webhooks: maps.Clone(s.s.Webhooks), Manual: maps.Clone(s.s.Manual), Events: append([]Event(nil), s.s.Events...), NextSequence: s.s.NextSequence}
+}
+func (s *Store) commit(next state) error {
 	if s.path == "" {
+		s.s = next
 		return nil
 	}
-	b, err := json.MarshalIndent(s.s, "", "  ")
+	b, err := json.Marshal(next)
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o750); err != nil {
+	if err = os.MkdirAll(filepath.Dir(s.path), 0o750); err != nil {
 		return err
 	}
 	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o640); err != nil {
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.path)
+	defer os.Remove(tmp)
+	if _, err = f.Write(b); err != nil {
+		f.Close()
+		return err
+	}
+	if err = f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	if err = os.Rename(tmp, s.path); err != nil {
+		return err
+	}
+	s.s = next
+	dir, err := os.Open(filepath.Dir(s.path))
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+	return dir.Sync()
 }
 
-// Ingest stores body as the latest document on channel; the last value wins.
+// Ingest preserves the existing API while retaining accepted and late events.
 func (s *Store) Ingest(channel string, body any, from string, at time.Time) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.s.Webhooks[channel] = Doc{Body: body, At: at.UTC(), From: from}
-	return s.save()
+	_, err := s.IngestEvent(channel, body, from, "", at, at, "")
+	return err
 }
 
 // Webhook returns the latest document on channel.
@@ -102,7 +137,13 @@ func (s *Store) Webhook(channel string) (Doc, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	d, ok := s.s.Webhooks[channel]
-	return d, ok
+	if !ok {
+		return d, false
+	}
+	b, _ := json.Marshal(d)
+	var detached Doc
+	_ = json.Unmarshal(b, &detached)
+	return detached, true
 }
 
 // SetManual records an operator-entered value for kpi.
@@ -110,8 +151,9 @@ func (s *Store) SetManual(kpi string, v Manual) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v.At = v.At.UTC()
-	s.s.Manual[kpi] = v
-	return s.save()
+	next := s.copyState()
+	next.Manual[kpi] = v
+	return s.commit(next)
 }
 
 // Manual returns the operator-entered value for kpi.

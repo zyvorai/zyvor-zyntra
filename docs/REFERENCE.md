@@ -285,7 +285,7 @@ The full reference (storage and capacity numbers, connectors, calibration, rollo
 
 ![Zyntra sign-in](ux/login.png)
 
-`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Automations** (Schedules, Webhooks, Bundles); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
+`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Decision planning, Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Automations** (Schedules, Webhooks, Bundles); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
 
 Using the console:
 
@@ -297,9 +297,10 @@ Using the console:
 
 - **Sign-in** asks for a username, then a password (or SSO, or the access key). Out of the box that is `admin` / `Admin@321`, flagged with a banner until changed.
 
+- **Decision planning** compares budgeted portfolios, declared financial assumptions, baseline replay, model-weight previews and delayed timelines. It never creates or executes a proposal; see [PLANNING.md](PLANNING.md).
 - **Gaps and Plan** have an owner filter, remembered across pages. Plan shows pairs, ranges, actions waiting on a precondition (not proposable) and the list blocked by constraints or invariants.
 - **Approvals** shows what will run: the Gryvia CRD, the webhook request (method, URL, headers with `${...}` references, body), the file that would be written, or "done by people" for noop actions, plus the linked compensating action.
-- **Signals** shows each source's state (healthy, stale, fallback, down), a form to enter manual KPI values with a reason, and when each webhook-in channel last received data.
+- **Signals** shows each source's state (healthy, stale, fallback, down), a form to enter manual KPI values with a reason, when each webhook-in channel last received data, and (for admins) the retained input-event journal; see [INPUT_EVENTS.md](INPUT_EVENTS.md).
 - **Objects** lists the business objects, their links, the source and time behind every fact, and the objects that depend on the one you select. Uncertain same-thing matches wait for a person to merge or reject them.
 - **Workflows** shows which objects are exposed to a failing KPI and the typed actions you can propose for them.
 - **Scenarios** saves a plan with its assumptions, runs it against current data and compares plans side by side. Running one never changes anything.
@@ -440,6 +441,7 @@ zyntra keep credential                   # zyntra-exec descriptor for ZYVOR_AGEN
 | `zyntra gaps [-owner NAME]` | KPIs missing target, worst first |
 | `zyntra simulate -action ID[+ID]` | Predicted KPI changes with ranges, constraint breaches and the propagation trace |
 | `zyntra plan [-owner NAME]` | Actions and pairs ranked with confidence, then those waiting on a precondition and those blocked by constraints or invariants |
+| `zyntra planning plan\|capture\|replay\|review\|process\|benefits` | Decision-planning workbench: portfolios, snapshots, model review and evidence helpers |
 | `zyntra pack list\|validate [DIR]` | List packs under `packs/`, or check one against its fixture |
 | `zyntra pack draft -industry TEXT -sample FILE [-out DIR]` | Draft a pack from CSV or JSON samples, then validate it |
 | `zyntra serve [-policy FILE]` | Console, REST API and SSE pulse |
@@ -466,7 +468,9 @@ All routes except `/healthz`, `/api/v1/meta`, sign-in and the OIDC redirects nee
 | `GET` | `/api/v1/kpis/{id}/history` | viewer | Recorded values |
 | `POST` | `/api/v1/kpis/{id}/value` | proposer | Enter a value for a `manual` KPI (`{"value":2,"reason":"..."}`), audited |
 | `GET` | `/api/v1/inputs` | viewer | Manual KPIs and webhook-in channels with their last entry |
-| `POST` | `/api/v1/ingest/{channel}` | ingest | JSON document for a `webhook-in` channel (ingest token or admin) |
+| `GET` | `/api/v1/inputs/{channel}/events` | admin | Retained webhook event journal (cursor, late, duplicates) |
+| `POST` | `/api/v1/ingest/{channel}` | ingest | JSON document for a `webhook-in` channel (ingest token or admin); optional Idempotency-Key and Observed-At |
+| `GET`/`POST` | `/api/v1/planning/snapshot`, `/portfolios`, `/replay`, `/review`, `/timeline`, `/process`, `/benefits`, `/quality` | viewer | Decision-planning workbench (advisory; never executes) |
 | `GET`/`POST` | `/api/v1/ai/status`, `/digest`, `/insights`, `/ask`, `/explain` | viewer | Grounded AI (`/digest?owner=&window=` for one owner's shift note) |
 | `GET` | `/api/v1/ai/edges`, `/ai/contradictions` | viewer | Proposed edges (not in the model) and pack README rules the plan breaks |
 | `POST` | `/api/v1/ai/pack-draft` | proposer | `{"industry":"…","samples":[{"name":"stock.csv","content":"…"}]}` returns drafted files, refusals and validation; nothing is written |

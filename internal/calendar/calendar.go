@@ -15,7 +15,17 @@ import (
 
 // Window is a recurring weekly window. End before Start wraps past
 // midnight. An empty Days list means every day.
+type Freeze struct {
+	Start  time.Time `yaml:"start" json:"start"`
+	End    time.Time `yaml:"end" json:"end"`
+	Reason string    `yaml:"reason,omitempty" json:"reason,omitempty"`
+}
+
 type Window struct {
+	// Holidays close the entire local date, including an overnight carry-over.
+	Holidays []string `yaml:"holidays,omitempty" json:"holidays,omitempty"`
+	Freezes  []Freeze `yaml:"freezes,omitempty" json:"freezes,omitempty"`
+
 	Days  []string `yaml:"days,omitempty" json:"days,omitempty"`
 	Start string   `yaml:"start" json:"start"`
 	End   string   `yaml:"end" json:"end"`
@@ -60,6 +70,16 @@ func (w *Window) Compile(def *time.Location) error {
 			return err
 		}
 	}
+	for _, day := range w.Holidays {
+		if _, err := time.Parse("2006-01-02", day); err != nil {
+			return fmt.Errorf("invalid holiday %q", day)
+		}
+	}
+	for _, f := range w.Freezes {
+		if f.Start.IsZero() || !f.End.After(f.Start) {
+			return fmt.Errorf("freeze end must follow start")
+		}
+	}
 	w.days = map[time.Weekday]bool{}
 	for _, d := range w.Days {
 		key := strings.ToLower(d)
@@ -82,6 +102,16 @@ func (w Window) Contains(t time.Time) bool {
 		return false
 	}
 	lt := t.In(w.loc)
+	for _, day := range w.Holidays {
+		if lt.Format("2006-01-02") == day {
+			return false
+		}
+	}
+	for _, f := range w.Freezes {
+		if !t.Before(f.Start) && t.Before(f.End) {
+			return false
+		}
+	}
 	mins := lt.Hour()*60 + lt.Minute()
 	day := lt.Weekday()
 	if w.start <= w.end {

@@ -1,0 +1,143 @@
+{
+  "currency": "INR",
+  "actions": {
+    "spend_20l_marketing": {
+      "excludes": [
+        "hire_two_engineers",
+        "stage_one_hire",
+        "postpone_30d",
+        "do_nothing"
+      ],
+      "resources": {
+        "review_hours": 2
+      },
+      "economics": {
+        "cost": 2000000,
+        "monthly_cost": 0,
+        "benefits": [
+          {
+            "id": "retained-and-new-revenue",
+            "monthly": 300000,
+            "evidence": "Synthetic leadership demo assumption; replace with independently supported economics."
+          }
+        ],
+        "assumptions": [
+          "DEMO ONLY: constant monthly economics; not a quote, measured saving, or revenue forecast.",
+          "Costs and benefits exclude tax, ramp-up, discounting and external changes."
+        ]
+      }
+    },
+    "hire_two_engineers": {
+      "excludes": [
+        "spend_20l_marketing",
+        "stage_one_hire",
+        "postpone_30d",
+        "do_nothing"
+      ],
+      "resources": {
+        "review_hours": 2
+      },
+      "economics": {
+        "cost": 400000,
+        "monthly_cost": 250000,
+        "benefits": [
+          {
+            "id": "retained-and-new-revenue",
+            "monthly": 400000,
+            "evidence": "Synthetic leadership demo assumption; replace with independently supported economics."
+          }
+        ],
+        "assumptions": [
+          "DEMO ONLY: constant monthly economics; not a quote, measured saving, or revenue forecast.",
+          "Costs and benefits exclude tax, ramp-up, discounting and external changes."
+        ]
+      }
+    },
+    "stage_one_hire": {
+      "excludes": [
+        "spend_20l_marketing",
+        "hire_two_engineers",
+        "postpone_30d",
+        "do_nothing"
+      ],
+      "resources": {
+        "review_hours": 2
+      },
+      "economics": {
+        "cost": 800000,
+        "monthly_cost": 125000,
+        "benefits": [
+          {
+            "id": "retained-and-new-revenue",
+            "monthly": 220000,
+            "evidence": "Synthetic leadership demo assumption; replace with independently supported economics."
+          }
+        ],
+        "assumptions": [
+          "DEMO ONLY: constant monthly economics; not a quote, measured saving, or revenue forecast.",
+          "Costs and benefits exclude tax, ramp-up, discounting and external changes."
+        ]
+      }
+    },
+    "experiment_landing": {
+      "excludes": [
+        "postpone_30d",
+        "do_nothing"
+      ],
+      "resources": {
+        "review_hours": 2
+      },
+      "economics": {
+        "cost": 200000,
+        "monthly_cost": 0,
+        "benefits": [],
+        "assumptions": [
+          "DEMO ONLY: constant monthly economics; not a quote, measured saving, or revenue forecast.",
+          "Costs and benefits exclude tax, ramp-up, discounting and external changes."
+        ]
+      }
+    },
+    "postpone_30d": {
+      "excludes": [
+        "spend_20l_marketing",
+        "hire_two_engineers",
+        "stage_one_hire",
+        "experiment_landing",
+        "do_nothing"
+      ],
+      "resources": {
+        "review_hours": 2
+      },
+      "economics": {
+        "cost": 0,
+        "monthly_cost": 0,
+        "benefits": [],
+        "assumptions": [
+          "DEMO ONLY: constant monthly economics; not a quote, measured saving, or revenue forecast.",
+          "Costs and benefits exclude tax, ramp-up, discounting and external changes."
+        ]
+      }
+    },
+    "do_nothing": {
+      "excludes": [
+        "spend_20l_marketing",
+        "hire_two_engineers",
+        "stage_one_hire",
+        "experiment_landing",
+        "postpone_30d"
+      ],
+      "resources": {
+        "review_hours": 2
+      },
+      "economics": {
+        "cost": 0,
+        "monthly_cost": 0,
+        "benefits": [],
+        "assumptions": [
+          "DEMO ONLY: constant monthly economics; not a quote, measured saving, or revenue forecast.",
+          "Costs and benefits exclude tax, ramp-up, discounting and external changes."
+        ]
+      }
+    }
+  }
+}

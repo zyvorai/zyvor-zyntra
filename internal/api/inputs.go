@@ -4,9 +4,11 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,13 +41,46 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	who := auth.FromContext(r.Context())
-	if err := s.opt.Inputs.Ingest(name, body, who.Subject, time.Now()); err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
+
+	if len(r.Header.Get("Idempotency-Key")) > 200 {
+		writeErr(w, 400, "idempotency key exceeds 200 characters")
 		return
 	}
-	s.RefreshOnce(r.Context())
-	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "channel": name, "kpis": kpis})
+	who := auth.FromContext(r.Context())
+	received := time.Now().UTC()
+	observed := time.Time{}
+	if raw := r.Header.Get("X-Zyntra-Observed-At"); raw != "" {
+		var err error
+		observed, err = time.Parse(time.RFC3339Nano, raw)
+		if err != nil || observed.After(received.Add(time.Minute)) {
+			writeErr(w, 400, "invalid observation timestamp")
+			return
+		}
+	}
+	quality, qualityErr := s.ingestQuality(name, body, received)
+	quarantine := ""
+	if qualityErr != nil {
+		quarantine = "ingest contract validation failed"
+	} else if quality != nil && !quality.Valid {
+		quarantine = "batch violates data contract"
+	}
+	receipt, err := s.opt.Inputs.IngestEvent(name, body, who.Subject, r.Header.Get("Idempotency-Key"), observed, received, quarantine)
+	if err != nil {
+		if errors.Is(err, inputs.ErrIdempotencyConflict) {
+			writeErr(w, 409, err.Error())
+		} else {
+			writeErr(w, 500, "event could not be persisted")
+		}
+		return
+	}
+	if receipt.Status == "quarantined" {
+		writeJSON(w, 422, map[string]any{"ok": false, "channel": name, "receipt": receipt, "quality": quality, "error": "event quarantined; latest input unchanged"})
+		return
+	}
+	if receipt.Status == "accepted" && !receipt.Duplicate {
+		s.RefreshOnce(r.Context())
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "channel": name, "kpis": kpis, "receipt": receipt})
 }
 
 // handleManualValue records an operator-entered value for a manual KPI.
@@ -143,4 +178,35 @@ func (s *Server) handleInputs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"manual": manual, "webhooks": channels})
+}
+
+// Event bodies can include fields beyond visible KPIs. Require full visibility
+// of every KPI using this channel before exposing retained payloads.
+func (s *Server) handleInputEvents(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	visible, _ := s.snapshotFor(r)
+	full, _ := s.snapshot()
+	if len(channelKPIs(visible, name)) == 0 || len(channelKPIs(visible, name)) != len(channelKPIs(full, name)) {
+		writeErr(w, 404, "unknown input channel")
+		return
+	}
+	after := uint64(0)
+	limit := 100
+	if raw := r.URL.Query().Get("after"); raw != "" {
+		var err error
+		after, err = strconv.ParseUint(raw, 10, 64)
+		if err != nil {
+			writeErr(w, 400, "invalid after cursor")
+			return
+		}
+	}
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		var err error
+		limit, err = strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > 200 {
+			writeErr(w, 400, "limit must be 1..200")
+			return
+		}
+	}
+	writeJSON(w, 200, s.opt.Inputs.Events(name, after, limit))
 }

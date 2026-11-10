@@ -13,12 +13,14 @@ import (
 )
 
 type Projection struct {
-	At     time.Time `json:"at"`
-	Hours  int       `json:"hours"`
-	Value  float64   `json:"value"`
-	Low    float64   `json:"low"`
-	High   float64   `json:"high"`
-	Breach bool      `json:"breach"`
+	At             time.Time `json:"at"`
+	Hours          int       `json:"hours"`
+	Value          float64   `json:"value"`
+	Low            *float64  `json:"low,omitempty"`
+	High           *float64  `json:"high,omitempty"`
+	Breach         bool      `json:"breach"`
+	Method         string    `json:"method"`
+	IntervalStatus string    `json:"interval_status"`
 }
 type Backtest struct {
 	Method      string  `json:"method"`
@@ -29,17 +31,18 @@ type Backtest struct {
 	ErrorRadius float64 `json:"error_radius"`
 }
 type AnalyticalKPI struct {
-	KPI           string       `json:"kpi"`
-	Name          string       `json:"name"`
-	Unit          string       `json:"unit"`
-	Status        string       `json:"status"`
-	Reason        string       `json:"reason,omitempty"`
-	Observations  int          `json:"observations"`
-	HourlySamples int          `json:"hourly_samples"`
-	LastSample    *time.Time   `json:"last_sample,omitempty"`
-	Backtests     []Backtest   `json:"backtests"`
-	Selected      string       `json:"selected,omitempty"`
-	Projections   []Projection `json:"projections"`
+	KPI              string            `json:"kpi"`
+	Name             string            `json:"name"`
+	Unit             string            `json:"unit"`
+	Status           string            `json:"status"`
+	Reason           string            `json:"reason,omitempty"`
+	Observations     int               `json:"observations"`
+	HourlySamples    int               `json:"hourly_samples"`
+	LastSample       *time.Time        `json:"last_sample,omitempty"`
+	Backtests        []Backtest        `json:"backtests"`
+	HorizonBacktests []HorizonBacktest `json:"horizon_backtests"`
+	Selected         string            `json:"selected,omitempty"`
+	Projections      []Projection      `json:"projections"`
 }
 type RobustAnomaly struct {
 	KPI      string  `json:"kpi"`
@@ -65,7 +68,7 @@ type AnalyticsReport struct {
 // Hourly means prevent dense scrapes from dominating the model. Only the
 // contiguous recent suffix is used: gaps are never filled with fabricated data.
 func Analytics(m *graph.Model, h *History, unusable map[string]bool) AnalyticsReport {
-	out := AnalyticsReport{KPIs: []AnalyticalKPI{}, Anomalies: []RobustAnomaly{}, Persistent: h.Persistent(), PersistenceError: h.PersistenceError(), IntervalNote: "Bands are the 90th percentile of absolute one-hour backtest errors, not calibrated multi-horizon prediction intervals."}
+	out := AnalyticsReport{KPIs: []AnalyticalKPI{}, Anomalies: []RobustAnomaly{}, Persistent: h.Persistent(), PersistenceError: h.PersistenceError(), IntervalNote: "Bands use horizon-specific calibration errors; coverage is measured on a later, disjoint evaluation window. Overlapping origins are dependent. Coverage is not a guarantee. A warming horizon has no interval."}
 	for _, k := range m.KPIs {
 		raw := h.Series(k.ID)
 
@@ -117,7 +120,6 @@ func Analytics(m *graph.Model, h *History, unusable map[string]bool) AnalyticsRe
 			methods = append(methods, "weekly-seasonal")
 		}
 		best := math.Inf(1)
-		var radius float64
 		for _, method := range methods {
 			b := backtest(values, method)
 			row.Backtests = append(row.Backtests, b)
@@ -125,12 +127,17 @@ func Analytics(m *graph.Model, h *History, unusable map[string]bool) AnalyticsRe
 			if b.MAE < best-1e-9 {
 				best = b.MAE
 				row.Selected = method
-				radius = b.ErrorRadius
 			}
 		}
 		row.Status = "ready"
 		for _, hours := range []int{1, 6, 24, 168} {
-			value := predict(values, row.Selected, hours)
+			hb := horizonBacktest(values, hours)
+			row.HorizonBacktests = append(row.HorizonBacktests, hb)
+			method := row.Selected
+			if hb.Status == "ready" {
+				method = hb.Method
+			}
+			value := predict(values, method, hours)
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				row.Status = "unavailable"
 				row.Reason = "Projection overflowed; input scale needs review."
@@ -138,7 +145,13 @@ func Analytics(m *graph.Model, h *History, unusable map[string]bool) AnalyticsRe
 				break
 			}
 			breach := k.Target != nil && ((k.Direction == graph.LowerIsBetter && value > *k.Target) || (k.Direction == graph.HigherIsBetter && value < *k.Target))
-			row.Projections = append(row.Projections, Projection{At: pts[len(pts)-1].T.Add(time.Duration(hours) * time.Hour), Hours: hours, Value: value, Low: value - radius, High: value + radius, Breach: breach})
+			p := Projection{At: pts[len(pts)-1].T.Add(time.Duration(hours) * time.Hour), Hours: hours, Value: value, Breach: breach, Method: method, IntervalStatus: hb.Status}
+			if hb.Status == "ready" {
+				lo, hi := value-hb.ErrorRadius, value+hb.ErrorRadius
+				p.Low = &lo
+				p.High = &hi
+			}
+			row.Projections = append(row.Projections, p)
 		}
 		out.KPIs = append(out.KPIs, row)
 	}

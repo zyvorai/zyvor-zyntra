@@ -19,6 +19,7 @@ import Ask from './pages/Ask';
 import ModelPage from './pages/ModelPage';
 import Decision from './pages/Decision';
 import Executive from './pages/Executive';
+import Planning from './pages/Planning';
 import Objects from './pages/Objects';
 import Workflows from './pages/Workflows';
 import Scenarios from './pages/Scenarios';
@@ -118,6 +119,7 @@ function Console({ who, meta, onLogout }: { who: WhoAmI; meta: Meta | null; onLo
           {page === 'servicelevels' && <ServiceLevels />}
           {page === 'decision' && <Decision />}
           {page === 'executive' && <Executive />}
+          {page === 'planning' && <Planning />}
           {page === 'schedules' && <Schedules />}
           {page === 'webhooks' && <Webhooks />}
           {page === 'bundles' && <Bundles />}

@@ -10,6 +10,8 @@ Self-contained packages under `internal/` wired into the API and console where t
 - **templates** — reusable decision skeletons; `GET /api/v1/templates`, `POST …/propose`
 - **activity** — principal last-seen; `activity.json`; `GET /api/v1/activity` (admin)
 - **policyguard** — optional declarative rule checks at propose time (`Options.PolicyGuardRules`)
+- **planning** — decision planning workbench (portfolios, financial assumptions, replay, model review, timelines, evidence); Decide → Decision planning
+- **input events** — retained webhook journal with idempotency, late observations and contract quarantine; see `docs/INPUT_EVENTS.md`
 
 ## Helper libraries (no duplicate HTTP)
 

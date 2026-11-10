@@ -38,7 +38,7 @@ func TestSeasonalSelectionAndProjections(t *testing.T) {
 	if math.Abs(k.Projections[0].Value-100) > 1e-8 {
 		t.Fatalf("next hour %+v", k.Projections[0])
 	}
-	if k.Projections[0].Low > k.Projections[0].Value || k.Projections[0].High < k.Projections[0].Value {
+	if k.Projections[0].Low == nil || k.Projections[0].High == nil || *k.Projections[0].Low > k.Projections[0].Value || *k.Projections[0].High < k.Projections[0].Value {
 		t.Fatal("bad band")
 	}
 	// Eight daily phase comparisons mean an ordinary daily peak is not unusual.

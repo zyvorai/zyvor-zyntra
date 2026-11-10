@@ -15,6 +15,7 @@ export type Page =
   | 'servicelevels'
   | 'decision'
   | 'executive'
+  | 'planning'
   | 'schedules'
   | 'webhooks'
   | 'bundles';
@@ -27,6 +28,7 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Decide',
     children: [
+      { page: 'planning', label: 'Decision planning', blurb: 'Budgets, portfolios, replay and model review.' },
       { page: 'executive', label: 'Executive', blurb: 'Decision inbox, briefs, conflicts and 30/60/90 reviews.' },
       { page: 'gaps', label: 'Gaps', blurb: 'KPIs off target, ranked by relative shortfall.' },
       { page: 'plan', label: 'Plan', blurb: 'Actions ranked by improvement minus risk.' },
@@ -86,6 +88,7 @@ export const pageTitles: Record<Page, string> = {
   servicelevels: 'Service levels',
   decision: 'Decision',
   executive: 'Executive',
+  planning: 'Decision planning',
   schedules: 'Schedules',
   webhooks: 'Webhooks',
   bundles: 'Bundles',

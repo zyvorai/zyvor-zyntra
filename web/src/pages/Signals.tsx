@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ago, can, fmt, setManual, type InputsResponse, type ManualInput, type Model, type SourceStatus } from '../api';
 import { useApi } from '../hooks';
 import { useWho } from '../session';
+import InputEvents from '../components/InputEvents';
 import { Card, Empty, ErrorNote, kpiMet, KpiValue, PageHero, PageSkeleton, Pill, Sparkline, TableScroll } from '../components/ui';
 
 type Hist = { kpi: string; points: { t: string; v: number }[] };
@@ -86,6 +87,8 @@ export default function Signals() {
   const manual = inputs.data?.manual ?? [];
   const channels = inputs.data?.webhooks ?? [];
   const [filter, setFilter] = useState('all');
+  const [eventChannel, setEventChannel] = useState('');
+  const isAdmin = who?.identity.roles?.includes('admin') || who?.identity.role === 'admin';
   const sources = src.data?.sources ?? [];
   const kpis = graph.data?.model.kpis ?? [];
 
@@ -156,7 +159,7 @@ export default function Signals() {
       {channels.length ? (
         <Card title="Webhook inputs">
           <p className="muted small">
-            Gateways POST JSON to <code>/api/v1/ingest/&lt;channel&gt;</code> with the ingest token. The last document wins.
+            Gateways POST JSON to <code>/api/v1/ingest/&lt;channel&gt;</code> with the ingest token. Accepted observations advance the latest value. Idempotent retries, late events and quarantined batches are retained for review.
           </p>
           <TableScroll><table className="table compact"><caption className="sr-only">Webhook sources</caption>
             <thead>
@@ -169,7 +172,7 @@ export default function Signals() {
             <tbody>
               {channels.map((c) => (
                 <tr key={c.name}>
-                  <td className="mono">{c.name}</td>
+                  <td className="mono">{c.name}{isAdmin ? <div><button className="linklike" onClick={() => setEventChannel(c.name)}>Retained events</button></div> : null}</td>
                   <td className="small">{c.kpis.join(', ')}</td>
                   <td className="small">{c.received_at ? `${ago(c.received_at)}${c.from ? ` from ${c.from}` : ''}` : <span className="muted">nothing yet</span>}</td>
                 </tr>
@@ -179,6 +182,7 @@ export default function Signals() {
         </Card>
       ) : null}
 
+      {eventChannel && isAdmin ? <InputEvents key={eventChannel} channel={eventChannel} /> : null}
       <Card title={filter === 'all' ? 'All KPIs' : `KPIs from ${filter}`} aside={filter !== 'all' ? <button className="linklike" onClick={() => setFilter('all')}>Show all</button> : null}>
         {shown.length === 0 ? (
           <Empty>No KPIs.</Empty>

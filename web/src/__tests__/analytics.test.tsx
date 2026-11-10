@@ -26,3 +26,18 @@ it('shows selected forecasts, backtests, warming states and persistence errors',
  expect(screen.getByRole('table', {name: 'Forecast accuracy for Sales'})).toBeTruthy();
  expect(screen.getByRole('table', {name: 'Projections for Sales'})).toBeTruthy();
 });
+
+it('does not invent a band for a warming long horizon', async () => {
+ mockApi({
+  'GET /api/v1/ai/insights': {anomalies:[],forecasts:[],analytics:{persistent:true,interval_note:'Horizon-specific validation',anomalies:[],kpis:[{
+   kpi:'sales',name:'Sales',unit:'INR',status:'ready',observations:100,hourly_samples:99,selected:'linear',backtests:[],
+   horizon_backtests:[{hours:168,status:'warming',reason:'Need more training history',samples:0,calibration_samples:0,mae:0,baseline_mae:0,coverage:0}],
+   projections:[{hours:168,value:500,breach:false,interval_status:'warming'}],
+  }]}},
+  'GET /api/v1/ai/status':{mode:'heuristic',mutations:'never'},
+  'GET /api/v1/ai/calibration':{decisions:0,kpis:[],suggestions:[],note:'No decisions.'},
+ });
+ render(<Insights setPage={()=>{}} />);
+ expect(await screen.findByText('Warming: more history needed')).toBeTruthy();
+ expect(screen.getByText('Need more training history')).toBeTruthy();
+});

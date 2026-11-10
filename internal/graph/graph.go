@@ -1216,6 +1216,8 @@ func (m *Model) Clone() *Model {
 		c.Calendars = make(calendar.Set, len(m.Calendars))
 		for n, w := range m.Calendars {
 			w.Days = append([]string(nil), w.Days...)
+			w.Holidays = append([]string(nil), w.Holidays...)
+			w.Freezes = append([]calendar.Freeze(nil), w.Freezes...)
 			c.Calendars[n] = w
 		}
 	}

@@ -157,12 +157,13 @@ function Analytics({ data }: { data: AnalyticsReport }) {
    {data.kpis.map(k => <div key={k.kpi} className="info-note">
     <strong>{k.name || k.kpi}</strong> · {k.observations} observations · {k.hourly_samples} consecutive hourly samples
     {k.status !== 'ready' ? <p className="muted small">{k.reason}</p> : <>
-     <p>Selected model: <strong>{k.selected}</strong></p>
+     <p>One-hour diagnostic model: <strong>{k.selected}</strong></p>
      <TableScroll><table className="table compact"><caption>Forecast accuracy for {k.name || k.kpi}</caption><thead><tr><th>Model</th><th className="num">MAE</th><th className="num">RMSE</th><th className="num">Origins</th></tr></thead><tbody>
       {k.backtests.map(b => <tr key={b.method}><td>{b.method}</td><td className="num">{fmt(b.mae)}</td><td className="num">{fmt(b.rmse)}</td><td className="num">{b.samples}</td></tr>)}
      </tbody></table></TableScroll>
+     {k.horizon_backtests?.length ? <TableScroll><table className="table compact"><caption>Horizon validation for {k.name || k.kpi}</caption><thead><tr><th>Horizon</th><th>Method</th><th>MAE</th><th>Baseline MAE</th><th>Coverage</th></tr></thead><tbody>{k.horizon_backtests.map(b => <tr key={b.hours}><td>{b.hours}h</td><td>{b.status === 'ready' ? b.method : b.reason}</td><td>{b.status === 'ready' ? fmt(b.mae) : '—'}</td><td>{b.status === 'ready' ? fmt(b.baseline_mae) : '—'}</td><td>{b.status === 'ready' ? `${fmt(b.coverage * 100)}% / ${b.samples} origins` : 'Warming'}</td></tr>)}</tbody></table></TableScroll> : null}
      <TableScroll><table className="table compact"><caption>Projections for {k.name || k.kpi}</caption><thead><tr><th>Horizon</th><th className="num">Value ({k.unit})</th><th className="num">Empirical band</th><th>Target</th></tr></thead><tbody>
-      {k.projections.map(p => <tr key={p.hours}><td>{p.hours}h</td><td className="num">{fmt(p.value)}</td><td className="num">{fmt(p.low)} – {fmt(p.high)}</td><td><Pill tone={p.breach ? 'warn' : 'neutral'}>{p.breach ? 'Projected miss' : 'No projected miss'}</Pill></td></tr>)}
+      {k.projections.map(p => <tr key={p.hours}><td>{p.hours}h</td><td className="num">{fmt(p.value)}</td><td className="num">{p.low === undefined || p.high === undefined ? 'Warming: more history needed' : `${fmt(p.low)} – ${fmt(p.high)}`}</td><td><Pill tone={p.breach ? 'warn' : 'neutral'}>{p.breach ? 'Projected miss' : 'No projected miss'}</Pill></td></tr>)}
      </tbody></table></TableScroll>
     </>}
    </div>)}

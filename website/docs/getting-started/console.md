@@ -6,7 +6,7 @@ sidebar_position: 2
 
 ![Zyntra sign-in](/img/login.png)
 
-`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Automations** (Schedules, Webhooks, Bundles); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
+`zyntra serve` embeds a React console in the Zyvor design language shared with Netra. Its pages are grouped as **Overview**; **Decide** (Decision planning, Executive, Gaps, Plan, Simulate); **Act** (Approvals, Audit); **Automations** (Schedules, Webhooks, Bundles); **Business** (Objects, Workflows, Scenarios, and Service levels for tenant accounts); **Signals**; **Intelligence** (Insights, Ask); and **Model**, plus a timeline page for each decision. The Business group appears when the pack defines an ontology; on a pack without one, Objects, Workflows and Scenarios say so and make no requests.
 
 Using the console:
 
@@ -18,9 +18,10 @@ Using the console:
 
 - **Sign-in** asks for a username, then a password (or SSO, or the access key). Out of the box that is `admin` / `Admin@321`, flagged with a banner until changed.
 
+- **Decision planning** compares budgeted portfolios, declared financial assumptions, baseline replay, model-weight previews and delayed timelines. It never creates or executes a proposal; see [Decision planning](/docs/core-concepts/planning).
 - **Gaps and Plan** have an owner filter, remembered across pages. Plan shows pairs, ranges, actions waiting on a precondition (not proposable) and the list blocked by constraints or invariants.
 - **Approvals** shows what will run: the Gryvia CRD, the webhook request (method, URL, headers with `${...}` references, body), the file that would be written, or "done by people" for noop actions, plus the linked compensating action.
-- **Signals** shows each source's state (healthy, stale, fallback, down), a form to enter manual KPI values with a reason, and when each webhook-in channel last received data.
+- **Signals** shows each source's state (healthy, stale, fallback, down), a form to enter manual KPI values with a reason, when each webhook-in channel last received data, and (for admins) the retained input-event journal; see [Input events](/docs/core-concepts/input-events).
 - **Objects** lists the business objects, their links, the source and time behind every fact, and the objects that depend on the one you select. Uncertain same-thing matches wait for a person to merge or reject them.
 - **Workflows** shows which objects are exposed to a failing KPI and the typed actions you can propose for them.
 - **Scenarios** saves a plan with its assumptions, runs it against current data and compares plans side by side. Running one never changes anything.

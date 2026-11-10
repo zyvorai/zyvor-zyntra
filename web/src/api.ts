@@ -740,7 +740,8 @@ export interface AnalyticsReport {
   kpi: string; name: string; unit: string; status: string; reason?: string;
   observations: number; hourly_samples: number; selected?: string;
   backtests: {method: string; samples: number; mae: number; rmse: number; baseline_mae: number; error_radius: number}[];
-  projections: {at: string; hours: number; value: number; low: number; high: number; breach: boolean}[];
+  horizon_backtests?: {hours: number; status: string; reason?: string; method?: string; samples: number; calibration_samples: number; mae: number; rmse: number; baseline_mae: number; error_radius: number; coverage: number}[];
+  projections: {at: string; hours: number; value: number; low?: number; high?: number; breach: boolean; method?: string; interval_status?: string}[];
  }[];
 }
 

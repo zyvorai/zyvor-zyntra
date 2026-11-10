@@ -96,6 +96,10 @@ func (r Result) Uncertainty() float64 { return r.WeightedAfterWorst - r.Weighted
 type Options struct {
 	// Unusable marks KPIs whose current value is stale or missing.
 	Unusable map[string]bool
+	// Timeline-only state. Ordinary simulations always use the settled outcome.
+	elapsed *time.Duration
+	history []Result
+	step    time.Duration
 }
 
 // Simulate applies an action's direct effects and propagates relative changes
@@ -185,6 +189,9 @@ func ApplyPlan(m *graph.Model, actions []graph.Action, opt Options) (Result, err
 	settle := map[string]time.Duration{}
 	for _, a := range actions {
 		for _, ef := range a.Effects {
+			if opt.elapsed != nil && ef.Delay.D() > *opt.elapsed {
+				continue
+			}
 			if _, ok := m.KPI(ef.KPI); !ok {
 				return Result{}, fmt.Errorf("action %q: unknown kpi %q", a.ID, ef.KPI)
 			}
@@ -228,6 +235,22 @@ func ApplyPlan(m *graph.Model, actions []graph.Action, opt Options) (Result, err
 		r := rel[id]
 		for _, e := range in[id] {
 			d := eff[e.From]
+			if opt.elapsed != nil && e.Delay > 0 {
+				d = interval{}
+				previous := *opt.elapsed - e.Delay.D()
+				if previous >= 0 {
+					idx := int(previous / opt.step)
+					if idx < len(opt.history) {
+						for _, k := range opt.history[idx].KPIs {
+							if k.KPI == e.From {
+								dn := denom(k.Before)
+								d = interval{(k.Low - k.Before) / dn, (k.After - k.Before) / dn, (k.High - k.Before) / dn}
+								break
+							}
+						}
+					}
+				}
+			}
 			if d.zero() || e.Weight == 0 {
 				continue
 			}

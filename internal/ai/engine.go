@@ -519,7 +519,11 @@ func analyticsAnswer(s Snapshot) Answer {
 		}
 		parts = append(parts, fmt.Sprintf("%s uses %s, selected by the lowest one-hour backtest MAE across 24 historical origins.", k.Name, k.Selected))
 		for _, p := range k.Projections {
-			parts = append(parts, fmt.Sprintf("At %s (%dh): %.4g%s, empirical band %.4g to %.4g.", p.At.Format(time.RFC3339), p.Hours, p.Value, unitSuffix(k.Unit), p.Low, p.High))
+			if p.Low != nil && p.High != nil {
+				parts = append(parts, fmt.Sprintf("At %s (%dh, %s): %.4g%s, horizon-specific empirical band %.4g to %.4g.", p.At.Format(time.RFC3339), p.Hours, p.Method, p.Value, unitSuffix(k.Unit), *p.Low, *p.High))
+			} else {
+				parts = append(parts, fmt.Sprintf("At %s (%dh): %.4g%s. Insufficient horizon-specific history for an interval.", p.At.Format(time.RFC3339), p.Hours, p.Value, unitSuffix(k.Unit)))
+			}
 		}
 		a.Grounding = append(a.Grounding, "analytics:"+k.KPI)
 		if len(a.Grounding) == 3 {

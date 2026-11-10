@@ -57,14 +57,26 @@ RMSE, last-value baseline MAE and sample count. The selected model is refitted
 using all available completed hours and projects 1, 6, 24 and 168 hours from the
 last completed bucket. `at` provides the absolute UTC time for each projection.
 
-The low/high band is the selected model's 90th-percentile **absolute one-hour
-backtest error** around the projected value. It is an empirical diagnostic band,
-not a calibrated multi-horizon prediction interval or a probability of breach.
-Long horizons are especially uncertain. Selection and error estimation use the
-same evaluation window; this is not independent test-set performance. Point
-projections are marked against the declared target; the model does not learn
-physical bounds or causal effects. Daily/weekly candidates repeat recent patterns
-and do not combine seasonality with trend.
+Forecasts now evaluate each 1, 6, 24 and 168 hour horizon separately. Each
+horizon selects a method and a 90th-percentile absolute-error radius from 24
+calibration origins, then reports MAE, RMSE, last-value baseline MAE and empirical
+coverage over 24 later evaluation origins. Every calibration target precedes
+the first evaluation origin. Weekly candidates require 336 training hours at the
+first calibration origin; other candidates require 48. The selected method may
+differ by horizon and is returned on each projection.
+
+`horizon_backtests` reports each horizon's method, sample counts, error radius,
+coverage and `ready`/`warming` status. A horizon needs at least `48 + 2*h + 46`
+consecutive hourly buckets for this split. Until then the point estimate uses the
+legacy one-hour-selected method, `interval_status` is `warming`, and `low`/`high`
+are omitted. Clients must handle absent bounds. The console and Ask do not show a
+band when it is unavailable. The legacy one-hour `backtests` and `selected` fields
+remain diagnostic outputs.
+
+These are empirical diagnostics, not a coverage guarantee or probability of
+breach. Rolling origins overlap, so samples are dependent. Calendar-aware local
+seasonality remains future work. Forecasts do not alter planner rankings or
+approve actions.
 
 Inputs currently missing, stale, held or carrying a refresh error are unavailable.
 History older than the larger of two minutes or three refresh intervals is also

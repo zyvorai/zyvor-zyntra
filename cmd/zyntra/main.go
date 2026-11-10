@@ -70,6 +70,8 @@ Usage:
   zyntra simulate -f kpis.yaml -action ID what-if: predicted KPI changes, why, and
                                           the dry-run payload (combine with a+b)
   zyntra plan     -f kpis.yaml [-owner O] rank actions and pairs; list blocked ones
+  zyntra planning plan|capture -f PACK [-request options.json]  financial portfolios and replay snapshots
+  zyntra planning replay|review|process|benefits -request request.json
   zyntra executive -f packs/leadership [-audience ceo|cto|marketing|leadership] [-decision ID] print the leadership inbox and brief
   zyntra pack list [-dir packs]           packs found under a directory
   zyntra pack validate [DIR...]           check packs (default: every pack in packs/)
@@ -231,6 +233,8 @@ func run(ctx context.Context, cmd string, args []string, out io.Writer) error {
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	c.register(fs)
 	switch cmd {
+	case "planning":
+		return runPlanning(ctx, args, out)
 	case "graph":
 		if err := fs.Parse(args); err != nil {
 			return err

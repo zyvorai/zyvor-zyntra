@@ -205,6 +205,8 @@ Full list: [Configuration](docs/REFERENCE.md#configuration).
 | [KPI investigations](docs/INVESTIGATIONS.md) | Sustained shifts, lagged change associations and their limits |
 | [Analytics foundation](docs/ANALYTICS.md) · [queries](docs/ANALYTICS_QUERIES.md) | Durable KPI history, robust anomalies, seasonal projections, backtests and scoped queries |
 | [Document knowledge](docs/KNOWLEDGE.md) | Versioned, permission-aware documents and cited answers in Ask |
+| [Decision planning workbench](docs/PLANNING.md) | Constrained portfolios, financial assumptions, replay, model review, timelines and evidence checks |
+| [Retained input events](docs/INPUT_EVENTS.md) | Idempotency, late observations, contract quarantine and cursor export |
 | [Product plan](docs/PRODUCT_PLAN.md) | Roadmap: what is planned, not what is shipped |
 
 ### Built to be trusted
