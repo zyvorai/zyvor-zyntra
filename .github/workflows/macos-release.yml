@@ -1,0 +1,81 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: LicenseRef-Zyvor-Production-1.0
+#
+# Build a Developer ID–signed, notarized macOS DMG and attach it to the GitHub Release.
+# Requires repository secrets (see docs/MAC_APP.md). Without a certificate the job
+# still builds an ad-hoc–signed DMG but skips notarization.
+name: macos-release
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+permissions:
+  contents: write
+jobs:
+  dmg:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Resolve version
+        id: ver
+        run: |
+          VERSION="$(sed -n 's/^var version = "\(.*\)"/\1/p' cmd/zyntra/main.go)"
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+            VERSION="${TAG#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building Zyntra $VERSION"
+
+      - name: Build and package DMG
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          ARCHS: arm64
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MACOS_CERTIFICATE_P12:-}" ]]; then
+            echo "No MACOS_CERTIFICATE_P12 secret; building ad-hoc DMG without notarization"
+            export SKIP_NOTARIZE=1
+          fi
+          ./macos/scripts/build-dmg.sh
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zyntra-${{ steps.ver.outputs.version }}-macos
+          path: |
+            macos/build/Zyntra-*-macos.dmg
+            macos/build/Zyntra-*-macos.dmg.sha256
+
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          DMG="macos/build/Zyntra-${VERSION}-macos.dmg"
+          SUM="${DMG}.sha256"
+          gh release upload "${{ github.event.release.tag_name }}" "$DMG" "$SUM" --clobber
