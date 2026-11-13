@@ -23,7 +23,7 @@ The smoke test logs in, posts any missing manual values, checks sources, gaps, p
 - Typed ontology actions get their required inputs from `/api/v1/ontology/schema`: the first object of the input's type that meets the action's `requires` checks. For `raise-inference-priority` in the gpu pack that is a `Service` with `tier: inference`.
 - An approved proposal is revalidated before it runs. If it ends `blocked` only because its stale inputs come from skipped sources (for example `keep_sandbox_ready` on a host without Keep), that counts as a pass and it says so. Any other block fails with the proposal's `blocked_reasons`.
 
-On the lab host, Keep sandboxes cannot reach the egress broker, so approved actions run locally and the audit records the executor as `zyntra (keep unavailable)`. The smoke test shows this line on purpose; set `keep: required` in the policy to block instead.
+If Keep sandboxes cannot reach the egress broker, approved actions run locally (`zyntra (keep unavailable)`). Deploy sets `ZYVOR_AGENT_EGRESS_ADVERTISE_HOST`; prove with `scripts/prove-keep-egress.sh`. Set `keep: required` to block instead.
 
 ## Container (Docker or Podman)
 

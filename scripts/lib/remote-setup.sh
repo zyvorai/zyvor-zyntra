@@ -228,6 +228,17 @@ PY
         *",$EXEC_CA,"*) ;;
         *) setenv "$KEEP_ENV" ZYVOR_AGENT_EXTRA_CA_FILE "${cas:+$cas,}$EXEC_CA" ;;
     esac
+    # Keep sandboxes need a host address reachable from the guest for the egress broker
+    # (same hole as Merion AG-UI). Default link-local; override via ZYVOR_AGENT_EGRESS_ADVERTISE_HOST.
+    local adv
+    adv=$(getenv "$KEEP_ENV" ZYVOR_AGENT_EGRESS_ADVERTISE_HOST)
+    if [ -z "$adv" ]; then
+        adv="${ZYVOR_AGENT_EGRESS_ADVERTISE_HOST:-169.254.0.1}"
+        setenv "$KEEP_ENV" ZYVOR_AGENT_EGRESS_ADVERTISE_HOST "$adv"
+        say "keep: ZYVOR_AGENT_EGRESS_ADVERTISE_HOST=$adv (agent→broker)"
+    else
+        say "keep: ZYVOR_AGENT_EGRESS_ADVERTISE_HOST already $adv"
+    fi
 
     after=$({ cat "$KEEP_ENV"; cat "$creds" 2>/dev/null || true; } | sha256sum)
     if [ "$before" != "$after" ]; then
