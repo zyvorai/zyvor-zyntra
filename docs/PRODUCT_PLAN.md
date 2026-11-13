@@ -191,7 +191,7 @@ Exit: `zyntra plan -f packs/shop` ranks a plan from the CSVs in `packs/shop/fixt
 - [x] Rank strictly on the pessimistic band; flag pairs that cancel.
 - [x] Audit chain includes the rendered payload and response hash.
 - [x] Pack id in Ask grounding.
-- [ ] Keep egress fixed. Until then the fallback stays labelled `zyntra (keep unavailable)` in the audit and the smoke test. Not hidden.
+- [ ] Keep egress fixed. Deploy now sets `ZYVOR_AGENT_EGRESS_ADVERTISE_HOST` (default `169.254.0.1`) via `scripts/lib/remote-setup.sh`; prove with `scripts/prove-keep-egress.sh`. Until a lab approve shows audit `by` ≠ `zyntra (keep unavailable)`, the fallback stays labelled. Not hidden.
 
 Already shipped in v0.3 and extended in Phase A: two-person approval, change windows, OIDC with API-key fallback, capped pair search.
 
